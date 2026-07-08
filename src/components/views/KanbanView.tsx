@@ -40,6 +40,27 @@ export function KanbanView() {
     updateTask(taskId, updates as Record<string, string | number | null>);
   };
 
+  const updateProject = useProjectStore((s) => s.updateProject);
+  const [editingProjectId, setEditingProjectId] = React.useState<string | null>(null);
+  const [editNameValue, setEditNameValue] = React.useState('');
+
+  const handleNameEdit = (proj: any) => {
+    setEditingProjectId(proj.id);
+    setEditNameValue(getMultiLangText(proj.name, lang));
+  };
+
+  const handleNameSave = (proj: any) => {
+    if (editNameValue.trim() && editNameValue.trim() !== getMultiLangText(proj.name, lang)) {
+      updateProject(proj.id, {
+        name: {
+          ...proj.name,
+          [lang]: editNameValue.trim()
+        }
+      });
+    }
+    setEditingProjectId(null);
+  };
+
   return (
     <div className="p-4 md:p-6 h-full">
       {/* Project filter info */}
@@ -51,10 +72,28 @@ export function KanbanView() {
             return (
               <>
                 <span className="text-lg">{proj.icon}</span>
-                <h2 className="text-lg font-bold text-surface-900">{getMultiLangText(proj.name, lang)}</h2>
+                {editingProjectId === proj.id ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    value={editNameValue}
+                    onChange={(e) => setEditNameValue(e.target.value)}
+                    onBlur={() => handleNameSave(proj)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleNameSave(proj)}
+                    className="text-lg font-bold text-surface-900 bg-transparent border-b-2 border-primary-500 focus:outline-none px-1 py-0"
+                  />
+                ) : (
+                  <h2 
+                    className="text-lg font-bold text-surface-900 hover:text-primary-600 cursor-pointer transition-colors"
+                    onClick={() => handleNameEdit(proj)}
+                    title={t('common.edit')}
+                  >
+                    {getMultiLangText(proj.name, lang)}
+                  </h2>
+                )}
                 <button
                   onClick={() => useUIStore.getState().setSelectedProjectId(null)}
-                  className="text-xs text-surface-400 hover:text-surface-600 ml-2"
+                  className="text-xs text-surface-400 hover:text-surface-600 ml-2 bg-surface-100 hover:bg-surface-200 px-2 py-1 rounded-full transition-colors"
                 >
                   × {t('common.all')}
                 </button>
