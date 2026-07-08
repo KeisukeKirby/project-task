@@ -37,8 +37,15 @@ export function CsvImportButton() {
         return;
       }
 
-      // Strip markdown code blocks if the user accidentally copied them
-      text = text.replace(/^```(csv)?\s*/i, '').replace(/```\s*$/i, '');
+      // Remove BOM if present
+      text = text.replace(/^\uFEFF/, '');
+
+      // Try to extract content from markdown code block if present
+      const match = text.match(/```(?:csv)?\s*([\s\S]*?)```/i);
+      if (match && match[1]) {
+        text = match[1];
+      }
+
       text = text.trim();
 
       Papa.parse(text, {
