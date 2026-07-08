@@ -50,6 +50,20 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     }
   }, [lang, task, isNew]);
 
+  // Auto-calculate estimated_lead_days when dates change
+  useEffect(() => {
+    if (form.planned_start_date && form.planned_end_date) {
+      const start = new Date(form.planned_start_date);
+      const end = new Date(form.planned_end_date);
+      if (end >= start) {
+        const days = Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1;
+        if (form.estimated_lead_days !== days) {
+          setForm(prev => ({ ...prev, estimated_lead_days: days }));
+        }
+      }
+    }
+  }, [form.planned_start_date, form.planned_end_date]);
+
   const handleSave = async () => {
     if (!form.name.trim()) return;
     setIsSaving(true);
@@ -136,6 +150,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
       sort_order: task.checklist.length,
       completed_at: null,
       completed_by: null,
+      due_date: null,
     };
     updateTask(task.id, { checklist: [...task.checklist, newItem] });
     setNewCheckItem('');
@@ -352,6 +367,14 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                     <span className={`text-sm flex-1 ${item.is_completed ? 'text-surface-400 line-through' : 'text-surface-700'}`}>
                       {item.title}
                     </span>
+                    <input
+                      type="date"
+                      value={item.due_date || ''}
+                      onChange={(e) => updateTask(task.id, {
+                        checklist: task.checklist.map(c => c.id === item.id ? { ...c, due_date: e.target.value || null } : c)
+                      })}
+                      className="px-2 py-1 text-xs rounded-md border border-surface-200 text-surface-500 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500/50"
+                    />
                     <button
                       onClick={() => updateTask(task.id, { checklist: task.checklist.filter(c => c.id !== item.id) })}
                       className="opacity-0 group-hover:opacity-100 text-surface-400 hover:text-danger transition-all"

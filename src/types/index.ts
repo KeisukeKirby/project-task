@@ -142,6 +142,7 @@ export interface ChecklistItem {
   sort_order: number;
   completed_at: string | null;
   completed_by: string | null;
+  due_date?: string | null;
 }
 
 // ── Comment ──
