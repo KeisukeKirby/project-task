@@ -39,6 +39,17 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
 
   const [isSaving, setIsSaving] = useState(false);
 
+  // Update form fields if language changes while viewing an existing task
+  useEffect(() => {
+    if (task && !isNew) {
+      setForm(prev => ({
+        ...prev,
+        name: getMultiLangText(task.name, lang),
+        description: getMultiLangText(task.description, lang),
+      }));
+    }
+  }, [lang, task, isNew]);
+
   const handleSave = async () => {
     if (!form.name.trim()) return;
     setIsSaving(true);
