@@ -17,6 +17,7 @@ import { GanttView } from '@/components/views/GanttView';
 import { CalendarView } from '@/components/views/CalendarView';
 import { TaskModal } from '@/components/modals/TaskModal';
 import { ProjectModal } from '@/components/modals/ProjectModal';
+import { CsvImportButton } from '@/components/ui/CsvImportButton';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
 
 const NAV_ITEMS: { key: ViewMode; icon: React.ElementType; labelKey: string }[] = [
@@ -332,13 +333,16 @@ export function DashboardShell() {
           </button>
 
           {/* New Task Button */}
-          <button
-            onClick={() => openTaskModal()}
-            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg text-sm font-medium hover:from-primary-600 hover:to-primary-700 transition-all shadow-md hover:shadow-lg active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('task.new')}</span>
-          </button>
+          <div className="hidden sm:flex items-center gap-2">
+            <CsvImportButton />
+            <button
+              onClick={() => openTaskModal()}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg text-sm font-medium hover:from-primary-600 hover:to-primary-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('task.new')}</span>
+            </button>
+          </div>
 
           {/* User Avatar */}
           <button
