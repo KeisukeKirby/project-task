@@ -29,44 +29,71 @@ export function CsvImportButton() {
 
     setIsParsing(true);
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const data = results.data as any[];
-        const rows: ParsedCsvRow[] = [];
-        
-        for (const row of data) {
-          const projectName = (row.Project || '').trim();
-          const taskName = (row.Task || '').trim();
-          const assigneeStr = (row.Assignee || '').trim();
-          const deadlineStr = (row.Deadline || '').trim();
-
-          if (!projectName || !taskName) continue;
-          
-          rows.push({
-            id: generateId(),
-            Project: projectName,
-            Task: taskName,
-            Assignee: assigneeStr,
-            Deadline: deadlineStr
-          });
-        }
-        
-        setParsedRows(rows);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      let text = event.target?.result as string;
+      if (!text) {
         setIsParsing(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      },
-      error: (error) => {
-        console.error('CSV Parsing error:', error);
-        setIsParsing(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
+        return;
       }
-    });
+
+      // Strip markdown code blocks if the user accidentally copied them
+      text = text.replace(/^```(csv)?\s*/i, '').replace(/```\s*$/i, '');
+      text = text.trim();
+
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => header.trim(),
+        complete: (results) => {
+          const data = results.data as any[];
+          const rows: ParsedCsvRow[] = [];
+          
+          for (const row of data) {
+            // Find keys case-insensitively just in case
+            const getVal = (key: string) => {
+              const foundKey = Object.keys(row).find(k => k.toLowerCase() === key.toLowerCase());
+              return foundKey ? (row[foundKey] || '').toString().trim() : '';
+            };
+
+            const projectName = getVal('project');
+            const taskName = getVal('task');
+            const assigneeStr = getVal('assignee');
+            const deadlineStr = getVal('deadline');
+
+            if (!projectName || !taskName) continue;
+            
+            rows.push({
+              id: generateId(),
+              Project: projectName,
+              Task: taskName,
+              Assignee: assigneeStr,
+              Deadline: deadlineStr
+            });
+          }
+          
+          setParsedRows(rows);
+          setIsParsing(false);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        },
+        error: (error: Error) => {
+          console.error('CSV Parsing error:', error);
+          setIsParsing(false);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }
+      });
+    };
+    
+    reader.onerror = () => {
+      console.error('Failed to read file');
+      setIsParsing(false);
+    };
+
+    reader.readAsText(file);
   };
 
   const handleConfirmImport = async (finalRows: ParsedCsvRow[]) => {
