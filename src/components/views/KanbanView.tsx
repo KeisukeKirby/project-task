@@ -51,10 +51,12 @@ export function KanbanView() {
 
   const handleNameSave = (proj: any) => {
     if (editNameValue.trim() && editNameValue.trim() !== getMultiLangText(proj.name, lang)) {
+      const newName = editNameValue.trim();
       updateProject(proj.id, {
         name: {
-          ...proj.name,
-          [lang]: editNameValue.trim()
+          ja: newName,
+          en: newName,
+          th: newName
         }
       });
     }
