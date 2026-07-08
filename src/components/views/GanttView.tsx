@@ -198,7 +198,7 @@ export function GanttView() {
                   >
                     <CheckSquare className="w-3.5 h-3.5 text-surface-400 flex-shrink-0" />
                     <span className={`text-[11px] truncate flex-1 ${row.item.is_completed ? 'text-surface-400 line-through' : 'text-surface-600'}`}>
-                      {row.item.title}
+                      {typeof row.item.title === 'string' ? row.item.title : getMultiLangText(row.item.title, lang)}
                     </span>
                   </div>
                 );
@@ -321,7 +321,7 @@ export function GanttView() {
                         className="absolute z-10 w-3 h-3 bg-primary-500 transform rotate-45 border border-white shadow-sm cursor-pointer hover:scale-125 transition-transform"
                         style={{ left: milestoneStyle.left }}
                         onClick={() => openTaskModal(row.task.id)}
-                        title={`${row.item.title} (${row.item.due_date})`}
+                        title={`${typeof row.item.title === 'string' ? row.item.title : getMultiLangText(row.item.title, lang)} (${row.item.due_date})`}
                       />
                     </div>
                   );

@@ -36,6 +36,8 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     planned_end_date: task?.planned_end_date || today,
   });
   const [newCheckItem, setNewCheckItem] = useState('');
+  const [editingCheckItemId, setEditingCheckItemId] = useState<string | null>(null);
+  const [editCheckItemTitle, setEditCheckItemTitle] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -140,12 +142,14 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleAddCheckItem = () => {
+  const handleAddCheckItem = async () => {
     if (!newCheckItem.trim() || !task) return;
+    const titleText = newCheckItem;
+    const newItemId = generateId();
     const newItem = {
-      id: generateId(),
+      id: newItemId,
       task_id: task.id,
-      title: newCheckItem,
+      title: titleText,
       is_completed: false,
       sort_order: task.checklist.length,
       completed_at: null,
@@ -154,6 +158,68 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     };
     updateTask(task.id, { checklist: [...task.checklist, newItem] });
     setNewCheckItem('');
+
+    try {
+      const { translateText } = await import('@/lib/translate');
+      const translated = await translateText(titleText, lang as Language);
+      const titleField = {
+        original: titleText,
+        original_lang: lang as Language,
+        ja: translated?.ja || titleText,
+        en: translated?.en || titleText,
+        th: translated?.th || titleText,
+        ja_confirmed: true,
+        en_confirmed: true,
+        th_confirmed: true,
+      };
+      
+      const currentTask = useTaskStore.getState().tasks.find(t => t.id === task.id);
+      if (currentTask) {
+        useTaskStore.getState().updateTask(task.id, {
+          checklist: currentTask.checklist.map(c => c.id === newItemId ? { ...c, title: titleField } : c)
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveCheckItemEdit = async (itemId: string) => {
+    if (!task) return;
+    const titleText = editCheckItemTitle.trim();
+    if (!titleText) {
+      setEditingCheckItemId(null);
+      return;
+    }
+
+    updateTask(task.id, {
+      checklist: task.checklist.map(c => c.id === itemId ? { ...c, title: titleText } : c)
+    });
+    setEditingCheckItemId(null);
+
+    try {
+      const { translateText } = await import('@/lib/translate');
+      const translated = await translateText(titleText, lang as Language);
+      const titleField = {
+        original: titleText,
+        original_lang: lang as Language,
+        ja: translated?.ja || titleText,
+        en: translated?.en || titleText,
+        th: translated?.th || titleText,
+        ja_confirmed: true,
+        en_confirmed: true,
+        th_confirmed: true,
+      };
+      
+      const currentTask = useTaskStore.getState().tasks.find(t => t.id === task.id);
+      if (currentTask) {
+        useTaskStore.getState().updateTask(task.id, {
+          checklist: currentTask.checklist.map(c => c.id === itemId ? { ...c, title: titleField } : c)
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const toggleCheckItem = (itemId: string) => {
@@ -364,9 +430,27 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                     >
                       {item.is_completed && <CheckCircle2 className="w-3 h-3" />}
                     </button>
-                    <span className={`text-sm flex-1 ${item.is_completed ? 'text-surface-400 line-through' : 'text-surface-700'}`}>
-                      {item.title}
-                    </span>
+                    {editingCheckItemId === item.id ? (
+                      <input
+                        type="text"
+                        autoFocus
+                        value={editCheckItemTitle}
+                        onChange={(e) => setEditCheckItemTitle(e.target.value)}
+                        onBlur={() => saveCheckItemEdit(item.id)}
+                        onKeyDown={(e) => e.key === 'Enter' && saveCheckItemEdit(item.id)}
+                        className="flex-1 text-sm px-1 py-0.5 border border-primary-300 rounded bg-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                      />
+                    ) : (
+                      <span 
+                        className={`text-sm flex-1 cursor-pointer hover:bg-surface-50 px-1 py-0.5 -mx-1 rounded transition-colors ${item.is_completed ? 'text-surface-400 line-through' : 'text-surface-700'}`}
+                        onClick={() => {
+                          setEditingCheckItemId(item.id);
+                          setEditCheckItemTitle(typeof item.title === 'string' ? item.title : getMultiLangText(item.title, lang));
+                        }}
+                      >
+                        {typeof item.title === 'string' ? item.title : getMultiLangText(item.title, lang)}
+                      </span>
+                    )}
                     <input
                       type="date"
                       value={item.due_date || ''}

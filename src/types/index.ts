@@ -137,7 +137,7 @@ export interface TaskDependency {
 export interface ChecklistItem {
   id: string;
   task_id: string;
-  title: string;
+  title: string | TranslatableText;
   is_completed: boolean;
   sort_order: number;
   completed_at: string | null;
