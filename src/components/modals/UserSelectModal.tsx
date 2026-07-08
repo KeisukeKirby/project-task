@@ -1,20 +1,66 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useI18n } from '@/i18n';
+import { supabase } from '@/lib/supabase';
+import { BarChart3, Mail, Lock, Loader2 } from 'lucide-react';
 import { useUserStore } from '@/stores';
-import { getAvatarColor } from '@/components/layout/DashboardShell';
-import { BarChart3, Crown, Users, Eye } from 'lucide-react';
 
-export function UserSelectModal({ onSelect }: { onSelect: (userId: string) => void }) {
+export function UserSelectModal() {
   const { lang, t, setLang } = useI18n();
-  const users = useUserStore((s) => s.users);
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const roleIcons: Record<string, React.ReactNode> = {
-    admin: <Crown className="w-3.5 h-3.5 text-amber-500" />,
-    owner: <Users className="w-3.5 h-3.5 text-primary-500" />,
-    member: <Users className="w-3.5 h-3.5 text-surface-400" />,
-    viewer: <Eye className="w-3.5 h-3.5 text-surface-400" />,
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isLogin) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
+      } else {
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name,
+            }
+          }
+        });
+        if (signUpError) throw signUpError;
+        
+        // If sign up is successful, insert into public.users table (trigger or manual)
+        // Here we do it manually for simplicity if no trigger is set
+        if (authData.user) {
+          const { error: insertError } = await supabase.from('users').insert([{
+            id: authData.user.id,
+            email: email,
+            name: name,
+            role: 'member',
+            preferred_language: lang
+          }]);
+          
+          if (insertError) {
+             // 23505 is unique violation, meaning the user already exists in public.users
+             if (insertError.code !== '23505') throw insertError;
+          }
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -48,42 +94,88 @@ export function UserSelectModal({ onSelect }: { onSelect: (userId: string) => vo
           ))}
         </div>
 
-        {/* User Cards */}
-        <div className="space-y-2">
-          <p className="text-white/50 text-xs text-center mb-3 uppercase tracking-wider">
-            {t('auth.selectUser')}
-          </p>
-          {users.map((user, idx) => (
-            <button
-              key={user.id}
-              onClick={() => onSelect(user.id)}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all group"
-              style={{ animationDelay: `${idx * 80}ms` }}
-            >
-              <div
-                className="avatar avatar-lg ring-2 ring-white/20 group-hover:ring-white/40 transition-all"
-                style={{ backgroundColor: getAvatarColor(user.id) }}
-              >
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 text-left">
-                <div className="text-white font-semibold group-hover:text-primary-300 transition-colors">{user.name}</div>
-                <div className="text-white/40 text-xs flex items-center gap-2 mt-0.5">
-                  {roleIcons[user.role]}
-                  <span>{user.team}</span>
-                  <span>•</span>
-                  <span>{user.role === 'admin' ? 'Admin' : user.role === 'owner' ? 'Owner' : 'Member'}</span>
+        {/* Auth Form */}
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-2xl">
+          <h2 className="text-xl font-semibold text-white mb-6 text-center">
+            {isLogin ? (lang === 'ja' ? 'ログイン' : 'Login') : (lang === 'ja' ? 'アカウント作成' : 'Sign Up')}
+          </h2>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-200 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            {!isLogin && (
+              <div>
+                <label className="block text-white/70 text-xs font-medium mb-1.5 uppercase tracking-wider">Name</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-3 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
+                    placeholder="Your Name"
+                  />
                 </div>
               </div>
-              <div className="text-white/30 group-hover:text-white/60 group-hover:translate-x-1 transition-all text-lg">→</div>
-            </button>
-          ))}
-        </div>
+            )}
+            
+            <div>
+              <label className="block text-white/70 text-xs font-medium mb-1.5 uppercase tracking-wider">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
+                  placeholder="name@company.com"
+                />
+              </div>
+            </div>
 
-        {/* Footer */}
-        <p className="text-center text-white/20 text-[10px] mt-8">
-          MVP Prototype — Data stored locally in browser
-        </p>
+            <div>
+              <label className="block text-white/70 text-xs font-medium mb-1.5 uppercase tracking-wider">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-2.5 rounded-lg transition-all shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2 mt-2"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isLogin ? (lang === 'ja' ? 'ログイン' : 'Sign In') : (lang === 'ja' ? '登録する' : 'Sign Up')}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center text-sm">
+            <button
+              type="button"
+              onClick={() => { setIsLogin(!isLogin); setError(null); }}
+              className="text-primary-300 hover:text-primary-200 transition-colors"
+            >
+              {isLogin 
+                ? (lang === 'ja' ? 'アカウントを作成する' : 'Create an account') 
+                : (lang === 'ja' ? '既存のアカウントでログイン' : 'Sign in with existing account')}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

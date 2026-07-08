@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useUIStore, useUserStore, useProjectStore, useTaskStore } from '@/stores';
-import type { Language, ViewMode } from '@/types';
+import type { Language, ViewMode, User } from '@/types';
+import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard, ListTodo, Columns3, BarChart3, Calendar,
   FileText, Settings, ChevronLeft, Menu, Plus, Search,
@@ -50,16 +51,54 @@ export function DashboardShell() {
   const projects = useProjectStore((s) => s.projects);
   const tasks = useTaskStore((s) => s.tasks);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [showUserSelect, setShowUserSelect] = useState(false);
+  const [showUserSelect, setShowUserSelect] = useState(true);
   const [mounted, setMounted] = useState(false);
+  
+  // Use supabase for auth session fetching
 
   useEffect(() => {
     setMounted(true);
-    // Auto-login as Shimada if no user selected
-    if (!currentUser) {
+    
+    // Check active session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setShowUserSelect(true);
+      }
+    });
+
+    // Listen for auth state changes (login, logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        fetchUserProfile(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser('');
+        setShowUserSelect(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+    if (!error && data) {
+      // Create a mock users list for UI fallback if not populated
+      useUserStore.setState((state) => {
+        const exists = state.users.find(u => u.id === data.id);
+        if (!exists) {
+          return { users: [...state.users, data as User], currentUser: data as User };
+        }
+        return { currentUser: data as User };
+      });
+      setShowUserSelect(false);
+    } else {
       setShowUserSelect(true);
     }
-  }, [currentUser]);
+  };
 
   if (!mounted) {
     return (
@@ -75,7 +114,7 @@ export function DashboardShell() {
   }
 
   if (showUserSelect || !currentUser) {
-    return <UserSelectModal onSelect={(userId) => { setCurrentUser(userId); setShowUserSelect(false); }} />;
+    return <UserSelectModal />;
   }
 
   const overdueTasks = tasks.filter(t => {
