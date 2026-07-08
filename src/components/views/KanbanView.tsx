@@ -5,7 +5,7 @@ import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
 import { getAvatarColor } from '@/components/layout/DashboardShell';
 import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus } from '@/types';
-import { Clock, AlertTriangle, GripVertical } from 'lucide-react';
+import { Clock, AlertTriangle, GripVertical, Trash2 } from 'lucide-react';
 
 const KANBAN_COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'revision', 'done'];
 
@@ -113,6 +113,17 @@ export function KanbanView() {
                   className="text-xs text-surface-400 hover:text-surface-600 ml-2 bg-surface-100 hover:bg-surface-200 px-2 py-1 rounded-full transition-colors"
                 >
                   × {t('common.all')}
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm(t('common.confirmDelete') || 'Are you sure you want to delete this project?')) {
+                      useProjectStore.getState().deleteProject(proj.id);
+                      useUIStore.getState().setSelectedProjectId(null);
+                    }
+                  }}
+                  className="text-xs text-danger hover:text-red-700 ml-2 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-full transition-colors flex items-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" /> {t('common.delete')}
                 </button>
               </>
             );
