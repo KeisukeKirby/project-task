@@ -25,8 +25,8 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const isNew = !taskModalId;
 
   const [form, setForm] = useState({
-    name: task?.name.original || '',
-    description: task?.description.original || '',
+    name: task?.name ? getMultiLangText(task.name, lang) : '',
+    description: task?.description ? getMultiLangText(task.description, lang) : '',
     status: task?.status || 'todo' as TaskStatus,
     priority: task?.priority || 'medium' as Priority,
     project_id: task?.project_id || projects[0]?.id || '',

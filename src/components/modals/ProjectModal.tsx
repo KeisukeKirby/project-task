@@ -32,42 +32,55 @@ export function ProjectModal({ onClose }: { onClose: () => void }) {
 
   const selectedTemplate = templates.find(t => t.id === form.template_id);
 
-  const handleCreate = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleCreate = async () => {
     if (!form.name.trim()) return;
+    setIsSaving(true);
 
-    const project = addProject({
-      name: {
-        ja: lang === 'ja' ? form.name : form.name,
-        en: lang === 'en' ? form.name : form.name,
-        th: lang === 'th' ? form.name : form.name,
-      },
-      description: {
-        ja: lang === 'ja' ? form.description : form.description,
-        en: lang === 'en' ? form.description : form.description,
-        th: lang === 'th' ? form.description : form.description,
-      },
-      deadline_date: form.deadline_date,
-      status: form.status,
-      color: form.color,
-      icon: form.icon,
-      template_id: form.template_id || null,
-      created_by: currentUser?.id || '',
-      members: form.memberIds.map((uid, i) => ({
-        id: `pm-${Date.now()}-${i}`,
-        project_id: '', // will be filled
-        user_id: uid,
-        role: uid === currentUser?.id ? 'owner' as const : 'member' as const,
-        joined_at: new Date().toISOString(),
-      })),
-      metadata: {},
-    });
+    try {
+      const { translateText } = await import('@/lib/translate');
+      const translatedName = await translateText(form.name, lang as Language);
+      const translatedDesc = form.description.trim() ? await translateText(form.description, lang as Language) : null;
 
-    // Generate tasks from template
-    if (selectedTemplate && project) {
-      addTasksFromTemplate(selectedTemplate, project.id, form.deadline_date, currentUser?.id || '');
+      const project = addProject({
+        name: {
+          ja: translatedName?.ja || form.name,
+          en: translatedName?.en || form.name,
+          th: translatedName?.th || form.name,
+        },
+        description: {
+          ja: translatedDesc?.ja || form.description,
+          en: translatedDesc?.en || form.description,
+          th: translatedDesc?.th || form.description,
+        },
+        deadline_date: form.deadline_date,
+        status: form.status,
+        color: form.color,
+        icon: form.icon,
+        template_id: form.template_id || null,
+        created_by: currentUser?.id || '',
+        members: form.memberIds.map((uid, i) => ({
+          id: `pm-${Date.now()}-${i}`,
+          project_id: '', // will be filled
+          user_id: uid,
+          role: uid === currentUser?.id ? 'owner' as const : 'member' as const,
+          joined_at: new Date().toISOString(),
+        })),
+        metadata: {},
+      });
+
+      // Generate tasks from template
+      if (selectedTemplate && project) {
+        addTasksFromTemplate(selectedTemplate, project.id, form.deadline_date, currentUser?.id || '');
+      }
+
+      onClose();
+    } catch (error) {
+      console.error('Save failed:', error);
+    } finally {
+      setIsSaving(false);
     }
-
-    onClose();
   };
 
   return (
@@ -170,9 +183,16 @@ export function ProjectModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex items-center justify-end gap-2 p-4 border-t border-surface-200 bg-surface-50/50">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-surface-600 hover:bg-surface-100 transition-colors">{t('common.cancel')}</button>
-          <button onClick={handleCreate}
-            className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-md hover:shadow-lg transition-all active:scale-95">
-            {t('common.create')}
+          <button onClick={handleCreate} disabled={isSaving}
+            className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            {isSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                {t('common.saving') || 'Saving...'}
+              </>
+            ) : (
+              t('common.create')
+            )}
           </button>
         </div>
       </div>
