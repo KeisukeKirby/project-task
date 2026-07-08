@@ -7,6 +7,7 @@ import { getAvatarColor } from '@/components/layout/DashboardShell';
 import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type Language } from '@/types';
 import { X, Play, CheckCircle2, Clock, Calendar, Users, Flag, MessageSquare, CheckSquare, Plus, Trash2, AlertTriangle, FolderOpen } from 'lucide-react';
 import { generateId } from '@/lib/mock-data';
+import { translateText } from '@/lib/translate';
 
 export function TaskModal({ onClose }: { onClose: () => void }) {
   const { lang, t, formatDate } = useI18n();
@@ -71,8 +72,6 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     setIsSaving(true);
 
     try {
-      const { translateText } = await import('@/lib/translate');
-      
       const translatedName = await translateText(form.name, lang as Language);
       const translatedDesc = form.description.trim() ? await translateText(form.description, lang as Language) : null;
 
@@ -160,7 +159,6 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     setNewCheckItem('');
 
     try {
-      const { translateText } = await import('@/lib/translate');
       const translated = await translateText(titleText, lang as Language);
       const titleField = {
         original: titleText,
@@ -198,7 +196,6 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     setEditingCheckItemId(null);
 
     try {
-      const { translateText } = await import('@/lib/translate');
       const translated = await translateText(titleText, lang as Language);
       const titleField = {
         original: titleText,
