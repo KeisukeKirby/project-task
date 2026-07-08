@@ -65,6 +65,14 @@ export function GanttView() {
         });
       }
     });
+
+    const projectsToShow = selectedProjectId 
+      ? projects.filter(p => p.id === selectedProjectId)
+      : projects.filter(p => filteredTasks.some(t => t.project_id === p.id));
+      
+    projectsToShow.forEach(project => {
+      if (project.deadline_date) dates.push(project.deadline_date);
+    });
     
     if (dates.length === 0) {
       const now = new Date();
@@ -74,9 +82,9 @@ export function GanttView() {
     }
     dates.sort();
     const start = new Date(dates[0]); start.setDate(start.getDate() - 3);
-    const end = new Date(dates[dates.length - 1]); end.setDate(end.getDate() + 5);
+    const end = new Date(dates[dates.length - 1]); end.setDate(end.getDate() + 14);
     return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
-  }, [filteredTasks]);
+  }, [filteredTasks, projects, selectedProjectId]);
 
   const totalDays = useMemo(() => {
     const s = new Date(dateRange.start);
@@ -334,7 +342,7 @@ export function GanttView() {
                   >
                     {barStyle.width > 0 && (
                       <div
-                        className={`gantt-bar flex items-center px-2 text-white text-[10px] font-medium whitespace-nowrap overflow-hidden z-10 ${isOverdue ? 'overdue' : ''}`}
+                        className={`gantt-bar absolute flex items-center px-2 text-white text-[10px] font-medium whitespace-nowrap overflow-hidden z-10 ${isOverdue ? 'overdue' : ''}`}
                         style={{
                           left: barStyle.left + 2,
                           width: barStyle.width,
