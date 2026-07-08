@@ -1,26 +1,272 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+  --color-surface-950: #020617;
+  
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #f43f5e;
+  --color-info: #06b6d4;
+
+  --font-sans: 'Inter', 'Noto Sans JP', 'Noto Sans Thai', system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 68px;
+    --header-height: 64px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-surface-300) transparent;
+  }
+
+  body {
+    @apply bg-surface-50 text-surface-800 antialiased;
+    font-family: var(--font-sans);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* ── Glass Effect ── */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-dark {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Card Styles ── */
+.card {
+  @apply bg-white rounded-xl border border-surface-200 shadow-sm transition-all duration-200;
+}
+
+.card:hover {
+  @apply shadow-md border-surface-300;
+}
+
+.card-glass {
+  @apply rounded-xl shadow-sm transition-all duration-200;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* ── Stat Card Gradient ── */
+.stat-card {
+  @apply relative overflow-hidden rounded-xl p-5 text-white;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── Status Dots ── */
+.status-dot {
+  @apply w-2.5 h-2.5 rounded-full inline-block;
+}
+
+.status-dot.todo { @apply bg-surface-400; }
+.status-dot.in_progress { @apply bg-primary-500; }
+.status-dot.review { @apply bg-warning; }
+.status-dot.revision { @apply bg-danger; }
+.status-dot.done { @apply bg-success; }
+
+/* ── Priority Badge ── */
+.priority-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+/* ── Gantt Chart ── */
+.gantt-bar {
+  @apply rounded-md h-7 transition-all duration-200 cursor-pointer;
+  min-width: 4px;
+}
+
+.gantt-bar:hover {
+  filter: brightness(1.1);
+  transform: scaleY(1.15);
+}
+
+.gantt-bar.overdue {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(255,255,255,0.2) 4px,
+    rgba(255,255,255,0.2) 8px
+  );
+}
+
+/* ── Progress Bar ── */
+.progress-bar {
+  @apply h-2 rounded-full bg-surface-200 overflow-hidden;
+}
+
+.progress-bar-fill {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+}
+
+/* ── Language Tab ── */
+.lang-tab {
+  @apply px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200;
+}
+
+.lang-tab.active {
+  @apply bg-primary-500 text-white shadow-md;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.lang-tab:not(.active) {
+  @apply text-surface-500 hover:bg-surface-100 hover:text-surface-700;
+}
+
+/* ── Translation Badge ── */
+.translation-badge {
+  @apply inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 text-primary-600;
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  @apply bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto;
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* ── Kanban Column ── */
+.kanban-column {
+  @apply flex flex-col rounded-xl p-3 min-h-[200px];
+  background: rgba(241, 245, 249, 0.7);
+  min-width: 280px;
+}
+
+.kanban-card {
+  @apply bg-white rounded-lg p-3 shadow-sm border border-surface-200 cursor-grab transition-all duration-150;
+}
+
+.kanban-card:hover {
+  @apply shadow-md -translate-y-0.5;
+}
+
+.kanban-card:active {
+  @apply cursor-grabbing shadow-lg;
+}
+
+/* ── Avatar ── */
+.avatar {
+  @apply w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white;
+}
+
+.avatar-sm { @apply w-6 h-6 text-[10px]; }
+.avatar-lg { @apply w-10 h-10 text-sm; }
+
+/* ── Tooltip ── */
+.tooltip-wrapper {
+  @apply relative;
+}
+
+.tooltip-wrapper::after {
+  content: attr(data-tooltip);
+  @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded text-xs text-white whitespace-nowrap opacity-0 pointer-events-none transition-opacity duration-200;
+  background: var(--color-surface-800);
+}
+
+.tooltip-wrapper:hover::after {
+  @apply opacity-100;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 100vw;
+    --header-height: 56px;
+  }
 }

@@ -1,0 +1,251 @@
+'use client';
+
+import React, { useMemo, useState } from 'react';
+import { useI18n, getMultiLangText } from '@/i18n';
+import { useTaskStore, useProjectStore, useUIStore } from '@/stores';
+import { STATUS_CONFIG } from '@/types';
+import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+
+export function GanttView() {
+  const { lang, t, formatDate } = useI18n();
+  const tasks = useTaskStore((s) => s.tasks);
+  const projects = useProjectStore((s) => s.projects);
+  const { selectedProjectId, openTaskModal } = useUIStore();
+  const [dayWidth, setDayWidth] = useState(32);
+  const today = new Date().toISOString().split('T')[0];
+
+  const filteredTasks = selectedProjectId
+    ? tasks.filter(t => t.project_id === selectedProjectId).sort((a, b) => a.sort_order - b.sort_order)
+    : tasks.filter(t => t.planned_start_date && t.planned_end_date).sort((a, b) => {
+        if (a.project_id !== b.project_id) return a.project_id.localeCompare(b.project_id);
+        return a.sort_order - b.sort_order;
+      });
+
+  // Calculate date range
+  const dateRange = useMemo(() => {
+    const dates = filteredTasks.flatMap(t => [t.planned_start_date, t.planned_end_date].filter(Boolean) as string[]);
+    if (dates.length === 0) {
+      const now = new Date();
+      const start = new Date(now); start.setDate(start.getDate() - 7);
+      const end = new Date(now); end.setDate(end.getDate() + 30);
+      return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+    }
+    dates.sort();
+    const start = new Date(dates[0]); start.setDate(start.getDate() - 3);
+    const end = new Date(dates[dates.length - 1]); end.setDate(end.getDate() + 5);
+    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+  }, [filteredTasks]);
+
+  const totalDays = useMemo(() => {
+    const s = new Date(dateRange.start);
+    const e = new Date(dateRange.end);
+    return Math.ceil((e.getTime() - s.getTime()) / 86400000) + 1;
+  }, [dateRange]);
+
+  const dayDates = useMemo(() => {
+    const days: string[] = [];
+    const current = new Date(dateRange.start);
+    for (let i = 0; i < totalDays; i++) {
+      days.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+    return days;
+  }, [dateRange, totalDays]);
+
+  const getBarStyle = (task: typeof filteredTasks[0]) => {
+    if (!task.planned_start_date || !task.planned_end_date) return { left: 0, width: 0 };
+    const startDiff = Math.max(0, Math.ceil((new Date(task.planned_start_date).getTime() - new Date(dateRange.start).getTime()) / 86400000));
+    const duration = Math.max(1, Math.ceil((new Date(task.planned_end_date).getTime() - new Date(task.planned_start_date).getTime()) / 86400000) + 1);
+    return {
+      left: startDiff * dayWidth,
+      width: duration * dayWidth - 4,
+    };
+  };
+
+  const todayOffset = Math.ceil((new Date(today).getTime() - new Date(dateRange.start).getTime()) / 86400000) * dayWidth;
+
+  // Group by week/month for header
+  const months = useMemo(() => {
+    const m: { label: string; days: number; startIdx: number }[] = [];
+    let currentMonth = '';
+    let count = 0;
+    let startIdx = 0;
+    dayDates.forEach((d, i) => {
+      const date = new Date(d);
+      const monthLabel = date.toLocaleDateString(lang === 'ja' ? 'ja-JP' : lang === 'th' ? 'th-TH' : 'en-US', { month: 'short', year: 'numeric' });
+      if (monthLabel !== currentMonth) {
+        if (currentMonth) m.push({ label: currentMonth, days: count, startIdx });
+        currentMonth = monthLabel;
+        count = 1;
+        startIdx = i;
+      } else {
+        count++;
+      }
+    });
+    if (currentMonth) m.push({ label: currentMonth, days: count, startIdx });
+    return m;
+  }, [dayDates, lang]);
+
+  const ROW_HEIGHT = 40;
+
+  return (
+    <div className="p-4 md:p-6 h-full flex flex-col">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 mb-4">
+        <h2 className="text-lg font-bold text-surface-900">{t('gantt.title')}</h2>
+        <div className="flex items-center gap-1 ml-auto">
+          <button onClick={() => setDayWidth(w => Math.max(16, w - 4))} className="p-2 rounded-lg hover:bg-surface-100 text-surface-500 transition-colors">
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <button onClick={() => setDayWidth(32)} className="p-2 rounded-lg hover:bg-surface-100 text-surface-500 transition-colors">
+            <Maximize2 className="w-4 h-4" />
+          </button>
+          <button onClick={() => setDayWidth(w => Math.min(64, w + 4))} className="p-2 rounded-lg hover:bg-surface-100 text-surface-500 transition-colors">
+            <ZoomIn className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Gantt Chart */}
+      <div className="flex-1 overflow-auto card">
+        <div className="flex min-h-full">
+          {/* Task List (Left Panel) */}
+          <div className="w-[240px] min-w-[240px] border-r border-surface-200 bg-white z-10 sticky left-0">
+            {/* Header */}
+            <div className="h-[60px] border-b border-surface-200 flex items-center px-4">
+              <span className="text-xs font-semibold text-surface-500 uppercase tracking-wider">{t('task.title')}</span>
+            </div>
+            {/* Rows */}
+            {filteredTasks.map((task, idx) => {
+              const project = projects.find(p => p.id === task.project_id);
+              const statusConf = STATUS_CONFIG[task.status];
+              return (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-2 px-4 border-b border-surface-100 hover:bg-surface-50 cursor-pointer transition-colors"
+                  style={{ height: ROW_HEIGHT }}
+                  onClick={() => openTaskModal(task.id)}
+                >
+                  <span className="status-dot flex-shrink-0" style={{ backgroundColor: statusConf.color, width: '8px', height: '8px' }} />
+                  <span className="text-xs text-surface-700 truncate flex-1 font-medium">
+                    {getMultiLangText(task.name, lang)}
+                  </span>
+                  <span className="text-[10px] text-surface-400">{task.estimated_lead_days}d</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Timeline (Right Panel) */}
+          <div className="flex-1 overflow-x-auto relative">
+            {/* Month Headers */}
+            <div className="h-[30px] flex border-b border-surface-200 sticky top-0 bg-white z-[5]">
+              {months.map((m, i) => (
+                <div key={i} className="flex items-center justify-center text-[10px] font-semibold text-surface-600 border-r border-surface-100"
+                  style={{ width: m.days * dayWidth, minWidth: m.days * dayWidth }}>
+                  {m.label}
+                </div>
+              ))}
+            </div>
+
+            {/* Day Headers */}
+            <div className="h-[30px] flex border-b border-surface-200 sticky top-[30px] bg-white z-[5]">
+              {dayDates.map((d, i) => {
+                const date = new Date(d);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isToday = d === today;
+                return (
+                  <div
+                    key={d}
+                    className={`flex items-center justify-center text-[10px] border-r border-surface-50 flex-shrink-0 ${
+                      isToday ? 'bg-primary-50 text-primary-700 font-bold' :
+                      isWeekend ? 'bg-surface-50 text-surface-400' :
+                      'text-surface-500'
+                    }`}
+                    style={{ width: dayWidth, minWidth: dayWidth }}
+                  >
+                    {date.getDate()}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Task Bars */}
+            <div className="relative" style={{ width: totalDays * dayWidth }}>
+              {/* Background columns */}
+              <div className="absolute inset-0 flex pointer-events-none">
+                {dayDates.map((d) => {
+                  const date = new Date(d);
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                  const isToday = d === today;
+                  return (
+                    <div
+                      key={d}
+                      className={`flex-shrink-0 border-r border-surface-50 ${
+                        isToday ? 'bg-primary-50/30' : isWeekend ? 'bg-surface-50/50' : ''
+                      }`}
+                      style={{ width: dayWidth, height: filteredTasks.length * ROW_HEIGHT }}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Today marker */}
+              <div
+                className="absolute top-0 w-0.5 bg-primary-500 z-[3] pointer-events-none"
+                style={{ left: todayOffset + dayWidth / 2, height: filteredTasks.length * ROW_HEIGHT }}
+              >
+                <div className="absolute -top-1 -left-1.5 w-3.5 h-3.5 bg-primary-500 rounded-full border-2 border-white shadow-sm" />
+              </div>
+
+              {/* Bars */}
+              {filteredTasks.map((task, idx) => {
+                const barStyle = getBarStyle(task);
+                const project = projects.find(p => p.id === task.project_id);
+                const isOverdue = task.planned_end_date && task.planned_end_date < today && task.status !== 'done';
+                const statusConf = STATUS_CONFIG[task.status];
+
+                return (
+                  <div
+                    key={task.id}
+                    className="absolute flex items-center"
+                    style={{ top: idx * ROW_HEIGHT + 6, left: barStyle.left + 2, height: ROW_HEIGHT - 12 }}
+                  >
+                    <div
+                      className={`gantt-bar flex items-center px-2 text-white text-[10px] font-medium whitespace-nowrap overflow-hidden ${isOverdue ? 'overdue' : ''}`}
+                      style={{
+                        width: barStyle.width,
+                        backgroundColor: project?.color || statusConf.color,
+                        opacity: task.status === 'done' ? 0.6 : 1,
+                      }}
+                      onClick={() => openTaskModal(task.id)}
+                      title={`${getMultiLangText(task.name, lang)} (${task.estimated_lead_days}d)`}
+                    >
+                      {barStyle.width > 50 && (
+                        <span className="truncate drop-shadow-sm">{getMultiLangText(task.name, lang)}</span>
+                      )}
+                    </div>
+
+                    {/* Actual progress overlay */}
+                    {task.actual_start_at && task.status !== 'done' && (
+                      <div
+                        className="absolute top-0 left-0 h-full rounded-md opacity-30"
+                        style={{
+                          width: Math.min(
+                            Math.ceil((Date.now() - new Date(task.actual_start_at).getTime()) / 86400000) * dayWidth,
+                            barStyle.width
+                          ),
+                          backgroundColor: '#000',
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
