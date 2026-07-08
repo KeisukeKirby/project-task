@@ -43,23 +43,23 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     const nameField = {
       original: form.name,
       original_lang: lang as Language,
-      ja: lang === 'ja' ? form.name : (task?.name.ja || form.name),
-      en: lang === 'en' ? form.name : (task?.name.en || form.name),
-      th: lang === 'th' ? form.name : (task?.name.th || form.name),
-      ja_confirmed: lang === 'ja',
-      en_confirmed: lang === 'en',
-      th_confirmed: lang === 'th',
+      ja: form.name,
+      en: form.name,
+      th: form.name,
+      ja_confirmed: true,
+      en_confirmed: true,
+      th_confirmed: true,
     };
 
     const descField = {
       original: form.description,
       original_lang: lang as Language,
-      ja: lang === 'ja' ? form.description : (task?.description.ja || form.description),
-      en: lang === 'en' ? form.description : (task?.description.en || form.description),
-      th: lang === 'th' ? form.description : (task?.description.th || form.description),
-      ja_confirmed: lang === 'ja',
-      en_confirmed: lang === 'en',
-      th_confirmed: lang === 'th',
+      ja: form.description,
+      en: form.description,
+      th: form.description,
+      ja_confirmed: true,
+      en_confirmed: true,
+      th_confirmed: true,
     };
 
     if (isNew) {
