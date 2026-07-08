@@ -37,30 +37,39 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   });
   const [newCheckItem, setNewCheckItem] = useState('');
 
-  const handleSave = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
     if (!form.name.trim()) return;
+    setIsSaving(true);
 
-    const nameField = {
-      original: form.name,
-      original_lang: lang as Language,
-      ja: form.name,
-      en: form.name,
-      th: form.name,
-      ja_confirmed: true,
-      en_confirmed: true,
-      th_confirmed: true,
-    };
+    try {
+      const { translateText } = await import('@/lib/translate');
+      
+      const translatedName = await translateText(form.name, lang as Language);
+      const translatedDesc = form.description.trim() ? await translateText(form.description, lang as Language) : null;
 
-    const descField = {
-      original: form.description,
-      original_lang: lang as Language,
-      ja: form.description,
-      en: form.description,
-      th: form.description,
-      ja_confirmed: true,
-      en_confirmed: true,
-      th_confirmed: true,
-    };
+      const nameField = {
+        original: form.name,
+        original_lang: lang as Language,
+        ja: translatedName?.ja || form.name,
+        en: translatedName?.en || form.name,
+        th: translatedName?.th || form.name,
+        ja_confirmed: true,
+        en_confirmed: true,
+        th_confirmed: true,
+      };
+
+      const descField = {
+        original: form.description,
+        original_lang: lang as Language,
+        ja: translatedDesc?.ja || form.description,
+        en: translatedDesc?.en || form.description,
+        th: translatedDesc?.th || form.description,
+        ja_confirmed: true,
+        en_confirmed: true,
+        th_confirmed: true,
+      };
 
     if (isNew) {
       addTask({
@@ -99,6 +108,11 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
       });
     }
     onClose();
+  } catch (error) {
+      console.error('Save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddCheckItem = () => {
@@ -371,9 +385,17 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
             </button>
             <button
               onClick={handleSave}
-              className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-md hover:shadow-lg transition-all active:scale-95"
+              disabled={isSaving}
+              className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isNew ? t('common.create') : t('common.save')}
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  {t('common.saving') || 'Saving...'}
+                </>
+              ) : (
+                isNew ? t('common.create') : t('common.save')
+              )}
             </button>
           </div>
         </div>

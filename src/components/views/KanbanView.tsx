@@ -49,16 +49,31 @@ export function KanbanView() {
     setEditNameValue(getMultiLangText(proj.name, lang));
   };
 
-  const handleNameSave = (proj: any) => {
+  const handleNameSave = async (proj: any) => {
     if (editNameValue.trim() && editNameValue.trim() !== getMultiLangText(proj.name, lang)) {
       const newName = editNameValue.trim();
-      updateProject(proj.id, {
-        name: {
-          ja: newName,
-          en: newName,
-          th: newName
-        }
-      });
+      
+      // Attempt to translate
+      const translatedName = await import('@/lib/translate').then(m => m.translateText(newName, lang as any));
+      
+      if (translatedName) {
+        updateProject(proj.id, {
+          name: {
+            ja: translatedName.ja,
+            en: translatedName.en,
+            th: translatedName.th
+          }
+        });
+      } else {
+        // Fallback if translation fails
+        updateProject(proj.id, {
+          name: {
+            ja: newName,
+            en: newName,
+            th: newName
+          }
+        });
+      }
     }
     setEditingProjectId(null);
   };
