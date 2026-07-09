@@ -171,9 +171,9 @@ export function GanttView() {
       <div className="flex-1 overflow-auto card">
         <div className="flex min-h-full">
           {/* Task List (Left Panel) */}
-          <div className="w-[240px] min-w-[240px] border-r border-surface-200 bg-white z-10 sticky left-0">
+          <div className="w-[240px] min-w-[240px] border-r border-surface-200 bg-white z-30 sticky left-0 shadow-[2px_0_10px_rgba(0,0,0,0.05)]">
             {/* Header */}
-            <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1 sticky top-0 bg-white z-20">
+            <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1 sticky top-0 bg-white z-40">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">{t('task.title')}</span>
                 <select
@@ -256,7 +256,7 @@ export function GanttView() {
           {/* Timeline (Right Panel) */}
           <div className="flex-1 relative">
             {/* Month Headers */}
-            <div className="h-[30px] flex border-b border-surface-200 sticky top-0 bg-white z-[5]">
+            <div className="h-[30px] flex border-b border-surface-200 sticky top-0 bg-white z-20">
               {months.map((m, i) => (
                 <div key={i} className="flex items-center justify-center text-[10px] font-semibold text-surface-600 border-r border-surface-100"
                   style={{ width: m.days * dayWidth, minWidth: m.days * dayWidth }}>
@@ -266,7 +266,7 @@ export function GanttView() {
             </div>
 
             {/* Day Headers */}
-            <div className="h-[30px] flex border-b border-surface-200 sticky top-[30px] bg-white z-[5]">
+            <div className="h-[30px] flex border-b border-surface-200 sticky top-[30px] bg-white z-20">
               {dayDates.map((d, i) => {
                 const date = new Date(d);
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -329,17 +329,24 @@ export function GanttView() {
                 return (
                   <div
                     key={event.id}
-                    className="absolute z-[2] opacity-20 pointer-events-none border-l-2"
+                    className="absolute z-[2] pointer-events-none"
                     style={{
                       left: eventOffset * dayWidth,
                       width: dayWidth,
                       top,
                       height,
                       backgroundColor: event.color,
-                      borderColor: event.color,
                     }}
                   >
-                    <div className="absolute top-1 left-1.5 whitespace-nowrap text-[10px] font-bold opacity-100" style={{ color: event.color }}>
+                    <div 
+                      className="absolute top-2 left-1/2 -translate-x-1/2 text-[11px] font-bold text-white tracking-widest drop-shadow-md"
+                      style={{ 
+                        writingMode: 'vertical-rl', 
+                        textOrientation: 'mixed',
+                        maxHeight: 'calc(100% - 16px)',
+                        overflow: 'hidden'
+                      }}
+                    >
                       {event.title}
                     </div>
                   </div>
