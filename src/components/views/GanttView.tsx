@@ -150,7 +150,7 @@ export function GanttView() {
   const ROW_HEIGHT = 40;
 
   return (
-    <div className="p-4 md:p-6 h-full flex flex-col">
+    <div className="p-4 md:p-6 flex-1 flex flex-col min-h-0">
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4">
         <h2 className="text-lg font-bold text-surface-900">{t('gantt.title')}</h2>

@@ -437,8 +437,8 @@ export function DashboardShell() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="animate-fade-in">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
+          <div className="animate-fade-in flex-1 flex flex-col min-h-0">
             {renderView()}
           </div>
         </main>
