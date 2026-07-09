@@ -5,10 +5,11 @@ export async function initSupabaseSync() {
   console.log('Initializing Supabase Sync...');
 
   // 1. Initial Fetch
-  const [usersRes, projectsRes, tasksRes] = await Promise.all([
+  const [usersRes, projectsRes, tasksRes, activitiesRes] = await Promise.all([
     supabase.from('users').select('*'),
     supabase.from('projects').select('*'),
-    supabase.from('tasks').select('*')
+    supabase.from('tasks').select('*'),
+    supabase.from('task_activities').select('*')
   ]);
 
   if (usersRes.data) {
@@ -22,6 +23,7 @@ export async function initSupabaseSync() {
   }
   if (projectsRes.data) useProjectStore.setState({ projects: projectsRes.data });
   if (tasksRes.data) useTaskStore.setState({ tasks: tasksRes.data });
+  if (activitiesRes.data) useTaskStore.setState({ taskActivities: activitiesRes.data });
 
   // 2. Setup Realtime Subscriptions
   supabase
@@ -61,6 +63,14 @@ export async function initSupabaseSync() {
           tasks: s.tasks.filter(t => t.id !== payload.old.id)
         }));
       }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_activities' }, (payload) => {
+      useTaskStore.setState(s => {
+        if (!s.taskActivities.find(a => a.id === payload.new.id)) {
+          return { taskActivities: [...s.taskActivities, payload.new as any] };
+        }
+        return s;
+      });
     })
     .subscribe();
 }

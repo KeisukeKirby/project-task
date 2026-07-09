@@ -182,3 +182,19 @@ alter publication supabase_realtime add table public.projects;
 alter publication supabase_realtime add table public.project_members;
 alter publication supabase_realtime add table public.tasks;
 alter publication supabase_realtime add table public.checklist_items;
+alter publication supabase_realtime add table public.task_activities;
+
+-- ── 9. Task Activities (History) ──
+CREATE TABLE IF NOT EXISTS public.task_activities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    field_name TEXT NOT NULL,  -- 'name', 'description', 'status', 'planned_end_date', etc.
+    old_value JSONB,
+    new_value JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.task_activities ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Activities are viewable by everyone" ON public.task_activities FOR SELECT USING (true);
+CREATE POLICY "Authenticated users can insert activities" ON public.task_activities FOR INSERT WITH CHECK (auth.role() = 'authenticated');

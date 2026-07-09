@@ -108,6 +108,18 @@ export interface TemplateStep {
   created_at: string;
 }
 
+// ── Task Activity (History) ──
+
+export interface TaskActivity {
+  id: string;
+  task_id: string;
+  user_id: string | null;
+  field_name: string;
+  old_value: any;
+  new_value: any;
+  created_at: string;
+}
+
 // ── Task ──
 
 export interface Task {

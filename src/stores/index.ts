@@ -58,6 +58,7 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
 
 interface TaskStore {
   tasks: Task[];
+  taskActivities: TaskActivity[];
   addTask: (task: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => Task;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -69,10 +70,12 @@ interface TaskStore {
   reorderTask: (id: string, newSortOrder: number) => void;
   addTasksFromTemplate: (template: TaskTemplate, projectId: string, deadline: string, createdBy: string) => Task[];
   recalculateSchedule: (projectId: string, deadline: string) => void;
+  getTaskActivities: (taskId: string) => TaskActivity[];
 }
 
 export const useTaskStore = create<TaskStore>()((set, get) => ({
       tasks: [],
+      taskActivities: [],
 
       addTask: (data) => {
         const task: Task = {
@@ -87,12 +90,45 @@ export const useTaskStore = create<TaskStore>()((set, get) => ({
       },
 
       updateTask: (id, updates) => {
+        const oldTask = get().getTask(id);
+        const currentUser = useUserStore.getState().currentUser;
+        
+        // Track activities for important fields
+        const newActivities: TaskActivity[] = [];
+        if (oldTask && currentUser) {
+          const fieldsToTrack = ['name', 'description', 'status', 'priority', 'planned_start_date', 'planned_end_date', 'assignees'] as const;
+          fieldsToTrack.forEach(field => {
+            if (updates[field] !== undefined) {
+              const oldVal = oldTask[field as keyof Task];
+              const newVal = updates[field];
+              if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+                const activity: TaskActivity = {
+                  id: generateId(),
+                  task_id: id,
+                  user_id: currentUser.id,
+                  field_name: field,
+                  old_value: oldVal,
+                  new_value: newVal,
+                  created_at: new Date().toISOString()
+                };
+                newActivities.push(activity);
+              }
+            }
+          });
+        }
+
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t
           ),
+          taskActivities: [...state.taskActivities, ...newActivities]
         }));
+        
         supabase.from('tasks').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({error}) => { if(error) console.error(error); });
+        
+        if (newActivities.length > 0) {
+          supabase.from('task_activities').insert(newActivities).then(({error}) => { if(error) console.error(error); });
+        }
       },
 
       deleteTask: (id) => {
@@ -131,19 +167,12 @@ export const useTaskStore = create<TaskStore>()((set, get) => ({
           const start = new Date(task.actual_start_at);
           actualDays = Math.ceil((now.getTime() - start.getTime()) / 86400000);
         }
-        set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  status: 'done' as TaskStatus,
-                  actual_end_at: now.toISOString(),
-                  actual_lead_days: actualDays,
-                  updated_at: now.toISOString(),
-                }
-              : t
-          ),
-        }));
+        
+        get().updateTask(id, {
+          status: 'done' as TaskStatus,
+          actual_end_at: now.toISOString(),
+          actual_lead_days: actualDays
+        });
       },
 
       reorderTask: (id, newSortOrder) => {
@@ -184,6 +213,10 @@ export const useTaskStore = create<TaskStore>()((set, get) => ({
           }),
         }));
       },
+      
+      getTaskActivities: (taskId) => {
+        return get().taskActivities.filter(a => a.task_id === taskId).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      }
     }));
 
 // ── Template Store ──

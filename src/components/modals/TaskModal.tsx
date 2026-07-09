@@ -5,7 +5,7 @@ import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
 import { getAvatarColor } from '@/components/layout/DashboardShell';
 import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type Language, type ChecklistItem } from '@/types';
-import { X, Play, CheckCircle2, Clock, Calendar, Users, Flag, MessageSquare, CheckSquare, Plus, Trash2, AlertTriangle, FolderOpen } from 'lucide-react';
+import { X, Play, CheckCircle2, Clock, Calendar, Users, Flag, MessageSquare, CheckSquare, Plus, Trash2, AlertTriangle, FolderOpen, History } from 'lucide-react';
 import { generateId } from '@/lib/mock-data';
 import { translateText } from '@/lib/translate';
 
@@ -13,6 +13,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const { lang, t, formatDate } = useI18n();
   const { taskModalId } = useUIStore();
   const task = useTaskStore((s) => taskModalId ? s.getTask(taskModalId) : undefined);
+  const activities = useTaskStore((s) => taskModalId ? s.getTaskActivities(taskModalId) : []);
   const updateTask = useTaskStore((s) => s.updateTask);
   const addTask = useTaskStore((s) => s.addTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
@@ -529,6 +530,68 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           </div>
+          
+          {/* Activity History */}
+          {!isNew && activities.length > 0 && (
+            <div className="pt-4 border-t border-surface-200 mt-6">
+              <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-4 flex items-center gap-1">
+                <History className="w-3 h-3" /> {t('task.history') || 'Activity History'}
+              </label>
+              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-surface-200 before:to-transparent">
+                {activities.map((activity) => {
+                  const user = users.find(u => u.id === activity.user_id);
+                  let fieldLabel = activity.field_name;
+                  switch(activity.field_name) {
+                    case 'name': fieldLabel = t('task.name') || 'Name'; break;
+                    case 'description': fieldLabel = t('task.description') || 'Description'; break;
+                    case 'status': fieldLabel = t('task.status') || 'Status'; break;
+                    case 'priority': fieldLabel = t('task.priority') || 'Priority'; break;
+                    case 'planned_start_date': fieldLabel = t('task.startDate') || 'Start Date'; break;
+                    case 'planned_end_date': fieldLabel = t('task.endDate') || 'End Date'; break;
+                    case 'assignees': fieldLabel = t('task.assignees') || 'Assignees'; break;
+                  }
+                  
+                  let oldDisplay = JSON.stringify(activity.old_value);
+                  let newDisplay = JSON.stringify(activity.new_value);
+                  
+                  if (activity.field_name === 'name' || activity.field_name === 'description') {
+                     oldDisplay = typeof activity.old_value === 'object' ? getMultiLangText(activity.old_value, lang) : activity.old_value;
+                     newDisplay = typeof activity.new_value === 'object' ? getMultiLangText(activity.new_value, lang) : activity.new_value;
+                  }
+                  if (activity.field_name === 'assignees') {
+                     oldDisplay = Array.isArray(activity.old_value) ? activity.old_value.map(id => users.find(u=>u.id===id)?.name || id).join(', ') : '';
+                     newDisplay = Array.isArray(activity.new_value) ? activity.new_value.map(id => users.find(u=>u.id===id)?.name || id).join(', ') : '';
+                  }
+
+                  return (
+                    <div key={activity.id} className="relative flex items-start gap-4">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full border-2 border-white bg-surface-100 flex items-center justify-center shadow-sm z-10" style={user ? {backgroundColor: getAvatarColor(user.id)} : {}}>
+                        {user ? (
+                           <span className="text-white text-xs font-bold">{user.name.charAt(0)}</span>
+                        ) : (
+                           <History className="w-3.5 h-3.5 text-surface-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 bg-surface-50 rounded-lg p-3 text-sm">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-surface-900">{user?.name || 'Unknown User'}</span>
+                          <span className="text-xs text-surface-400">{formatDate(activity.created_at)}</span>
+                        </div>
+                        <div className="text-surface-600">
+                          Updated <span className="font-semibold">{fieldLabel}</span>
+                          <div className="mt-1 flex items-center gap-2 text-xs">
+                            <span className="line-through text-surface-400 truncate max-w-[150px]" title={oldDisplay}>{oldDisplay || '(empty)'}</span>
+                            <span className="text-surface-400">→</span>
+                            <span className="font-medium text-primary-600 truncate max-w-[150px]" title={newDisplay}>{newDisplay || '(empty)'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
