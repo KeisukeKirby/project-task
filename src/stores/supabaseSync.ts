@@ -14,7 +14,7 @@ export async function initSupabaseSync() {
   if (usersRes.data) {
     const mappedUsers = usersRes.data.map(u => {
       if (u.email === 'mktbarefootincth@gmail.com') {
-        return { ...u, id: 'user-beer', name: 'Beer' };
+        return { ...u, id: 'ae1b2de9-b7b1-424b-a42f-89766e2d016d', name: 'Beer' };
       }
       return u;
     });

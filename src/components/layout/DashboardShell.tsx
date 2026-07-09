@@ -92,14 +92,14 @@ export function DashboardShell() {
     // Map mktbarefootincth@gmail.com directly to the Beer mock user without requiring a public.users row
     if (email === 'mktbarefootincth@gmail.com') {
       const beerUser = {
-        id: 'user-beer',
+        id: 'ae1b2de9-b7b1-424b-a42f-89766e2d016d', // Real UUID of Beer in database
         name: 'Beer',
         email: email,
         role: 'member',
         preferred_language: 'ja'
       };
       useUserStore.setState((state) => {
-        const exists = state.users.find(u => u.id === 'user-beer');
+        const exists = state.users.find(u => u.id === 'ae1b2de9-b7b1-424b-a42f-89766e2d016d');
         if (!exists) {
           return { users: [...state.users, beerUser as any], currentUser: beerUser as any };
         }
