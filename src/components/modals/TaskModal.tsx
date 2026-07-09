@@ -353,7 +353,10 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                     <div className="avatar avatar-sm" style={{ backgroundColor: getAvatarColor(user.id) }}>
                       {user.name.charAt(0)}
                     </div>
-                    {user.name}
+                    <div className="flex flex-col items-start text-left">
+                      <span className="text-xs font-bold leading-tight">{user.name}</span>
+                      <span className="text-[10px] leading-tight opacity-75">{user.email}</span>
+                    </div>
                   </button>
                 );
               })}
