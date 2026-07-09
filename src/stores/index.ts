@@ -221,6 +221,7 @@ interface UserStore {
   currentUser: User | null;
   setCurrentUser: (userId: string) => void;
   getUser: (id: string) => User | undefined;
+  addManualUser: (name: string) => Promise<User | null>;
 }
 
 export const useUserStore = create<UserStore>()((set, get) => ({
@@ -231,6 +232,41 @@ export const useUserStore = create<UserStore>()((set, get) => ({
         set({ currentUser: user });
       },
       getUser: (id) => get().users.find((u) => u.id === id),
+      addManualUser: async (name) => {
+        const id = crypto.randomUUID();
+        const newUser: User = {
+          id,
+          email: `virtual-${id}@local.dev`,
+          name,
+          avatar_url: '',
+          role: 'member',
+          team: '',
+          preferred_language: 'ja',
+          max_concurrent_tasks: 5,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        // Optimistic update
+        set((state) => ({ users: [...state.users, newUser] }));
+        
+        // Push to Supabase
+        const { error } = await supabase.from('users').insert([{
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          preferred_language: newUser.preferred_language,
+          max_concurrent_tasks: newUser.max_concurrent_tasks
+        }]);
+        
+        if (error) {
+          console.error('Failed to insert virtual user:', error);
+          return null;
+        }
+        
+        return newUser;
+      }
     }));
 
 // ── UI Store ──

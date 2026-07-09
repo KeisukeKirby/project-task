@@ -40,6 +40,9 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const [editingCheckItemId, setEditingCheckItemId] = useState<string | null>(null);
   const [editCheckItemTitle, setEditCheckItemTitle] = useState('');
 
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+
   const [isSaving, setIsSaving] = useState(false);
 
   // Update form fields if language changes while viewing an existing task
@@ -354,6 +357,48 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                   </button>
                 );
               })}
+              
+              {isAddingMember ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="名前を入力..."
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter' && newMemberName.trim()) {
+                        e.preventDefault();
+                        const store = useUserStore.getState();
+                        if (store.addManualUser) {
+                          const user = await store.addManualUser(newMemberName.trim());
+                          if (user) {
+                            setForm({ ...form, assignees: [...form.assignees, user.id] });
+                          }
+                        }
+                        setNewMemberName('');
+                        setIsAddingMember(false);
+                      }
+                      if (e.key === 'Escape') {
+                        setIsAddingMember(false);
+                        setNewMemberName('');
+                      }
+                    }}
+                    onBlur={() => {
+                      setIsAddingMember(false);
+                      setNewMemberName('');
+                    }}
+                    className="px-2 py-1.5 rounded-lg border border-primary-300 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 w-32"
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => { e.preventDefault(); setIsAddingMember(true); }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-surface-500 border border-dashed border-surface-300 hover:bg-surface-50 hover:text-primary-600 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> 追加
+                </button>
+              )}
             </div>
           </div>
 
