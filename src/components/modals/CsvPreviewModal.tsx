@@ -37,7 +37,7 @@ export function CsvPreviewModal({ rows: initialRows, onConfirm, onClose }: CsvPr
   };
 
   return (
-    <div className="modal-overlay z-[100]" onClick={(e) => { if (e.target === e.currentTarget && !isImporting) onClose(); }}>
+    <div className="modal-overlay z-[100]">
       <div className="modal-content w-full max-w-5xl mx-4 flex flex-col max-h-[90vh]">
         
         {/* Header */}

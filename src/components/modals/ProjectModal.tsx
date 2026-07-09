@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
-import { useProjectStore, useTaskStore, useTemplateStore, useUserStore } from '@/stores';
+import { useProjectStore, useTaskStore, useTemplateStore, useUserStore, useUIStore } from '@/stores';
 import { getAvatarColor } from '@/components/layout/DashboardShell';
 import { X, Calendar, FileText, Palette, Users } from 'lucide-react';
 import type { Language, ProjectStatus } from '@/types';
@@ -14,20 +14,24 @@ const ICONS = ['📁', '🎨', '📣', '🏪', '📚', '🎯', '🚀', '💎', '
 export function ProjectModal({ onClose }: { onClose: () => void }) {
   const { lang, t } = useI18n();
   const addProject = useProjectStore((s) => s.addProject);
+  const updateProject = useProjectStore((s) => s.updateProject);
   const addTasksFromTemplate = useTaskStore((s) => s.addTasksFromTemplate);
   const templates = useTemplateStore((s) => s.templates);
   const users = useUserStore((s) => s.users);
   const currentUser = useUserStore((s) => s.currentUser);
+  const { projectModalId } = useUIStore();
+  const project = useProjectStore((s) => projectModalId ? s.getProject(projectModalId) : undefined);
+  const isEdit = !!projectModalId;
 
   const [form, setForm] = useState({
-    name: '',
-    description: '',
-    deadline_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-    color: COLORS[0],
-    icon: ICONS[0],
-    template_id: templates[0]?.id || '',
-    status: 'planning' as ProjectStatus,
-    memberIds: currentUser ? [currentUser.id] : [],
+    name: project ? getMultiLangText(project.name, lang) : '',
+    description: project ? getMultiLangText(project.description, lang) : '',
+    deadline_date: project?.deadline_date || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+    color: project?.color || COLORS[0],
+    icon: project?.icon || ICONS[0],
+    template_id: project?.template_id || templates[0]?.id || '',
+    status: project?.status || 'planning' as ProjectStatus,
+    memberIds: project ? project.members.map(m => m.user_id) : (currentUser ? [currentUser.id] : []),
   });
 
   const selectedTemplate = templates.find(t => t.id === form.template_id);
@@ -43,36 +47,55 @@ export function ProjectModal({ onClose }: { onClose: () => void }) {
       const translatedName = await translateText(form.name, lang as Language);
       const translatedDesc = form.description.trim() ? await translateText(form.description, lang as Language) : null;
 
-      const project = addProject({
-        name: {
-          ja: translatedName?.ja || form.name,
-          en: translatedName?.en || form.name,
-          th: translatedName?.th || form.name,
-        },
-        description: {
-          ja: translatedDesc?.ja || form.description,
-          en: translatedDesc?.en || form.description,
-          th: translatedDesc?.th || form.description,
-        },
-        deadline_date: form.deadline_date,
-        status: form.status,
-        color: form.color,
-        icon: form.icon,
-        template_id: form.template_id || null,
-        created_by: currentUser?.id || '',
-        members: form.memberIds.map((uid, i) => ({
-          id: `pm-${Date.now()}-${i}`,
-          project_id: '', // will be filled
-          user_id: uid,
-          role: uid === currentUser?.id ? 'owner' as const : 'member' as const,
-          joined_at: new Date().toISOString(),
-        })),
-        metadata: {},
-      });
+      if (isEdit && projectModalId) {
+        updateProject(projectModalId, {
+          name: {
+            ja: translatedName?.ja || form.name,
+            en: translatedName?.en || form.name,
+            th: translatedName?.th || form.name,
+          },
+          description: {
+            ja: translatedDesc?.ja || form.description,
+            en: translatedDesc?.en || form.description,
+            th: translatedDesc?.th || form.description,
+          },
+          deadline_date: form.deadline_date,
+          status: form.status,
+          color: form.color,
+          icon: form.icon,
+        });
+      } else {
+        const newProject = addProject({
+          name: {
+            ja: translatedName?.ja || form.name,
+            en: translatedName?.en || form.name,
+            th: translatedName?.th || form.name,
+          },
+          description: {
+            ja: translatedDesc?.ja || form.description,
+            en: translatedDesc?.en || form.description,
+            th: translatedDesc?.th || form.description,
+          },
+          deadline_date: form.deadline_date,
+          status: form.status,
+          color: form.color,
+          icon: form.icon,
+          template_id: form.template_id || null,
+          created_by: currentUser?.id || '',
+          members: form.memberIds.map((uid, i) => ({
+            id: `pm-${Date.now()}-${i}`,
+            project_id: '', // will be filled
+            user_id: uid,
+            role: uid === currentUser?.id ? 'owner' as const : 'member' as const,
+            joined_at: new Date().toISOString(),
+          })),
+          metadata: {},
+        });
 
-      // Generate tasks from template
-      if (selectedTemplate && project) {
-        addTasksFromTemplate(selectedTemplate, project.id, form.deadline_date, currentUser?.id || '');
+        // Generate tasks from template
+        if (selectedTemplate && newProject) {
+          addTasksFromTemplate(selectedTemplate, newProject.id, form.deadline_date, currentUser?.id || '');
+        }
       }
 
       onClose();
@@ -84,10 +107,10 @@ export function ProjectModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-overlay">
       <div className="modal-content w-full max-w-lg mx-4">
         <div className="flex items-center justify-between p-4 border-b border-surface-200">
-          <h2 className="text-lg font-bold text-surface-900">{t('project.new')}</h2>
+          <h2 className="text-lg font-bold text-surface-900">{isEdit ? t('common.edit') : t('project.new')}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface-100 text-surface-400"><X className="w-5 h-5" /></button>
         </div>
 
@@ -191,7 +214,7 @@ export function ProjectModal({ onClose }: { onClose: () => void }) {
                 {t('common.saving') || 'Saving...'}
               </>
             ) : (
-              t('common.create')
+              isEdit ? t('common.save') : t('common.create')
             )}
           </button>
         </div>

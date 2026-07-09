@@ -11,7 +11,15 @@ export async function initSupabaseSync() {
     supabase.from('tasks').select('*')
   ]);
 
-  if (usersRes.data) useUserStore.setState({ users: usersRes.data });
+  if (usersRes.data) {
+    const mappedUsers = usersRes.data.map(u => {
+      if (u.email === 'mktbarefootincth@gmail.com') {
+        return { ...u, id: 'user-beer', name: 'Beer' };
+      }
+      return u;
+    });
+    useUserStore.setState({ users: mappedUsers });
+  }
   if (projectsRes.data) useProjectStore.setState({ projects: projectsRes.data });
   if (tasksRes.data) useTaskStore.setState({ tasks: tasksRes.data });
 

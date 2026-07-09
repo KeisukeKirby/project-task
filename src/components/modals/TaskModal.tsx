@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
 import { getAvatarColor } from '@/components/layout/DashboardShell';
-import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type Language } from '@/types';
+import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type Language, type ChecklistItem } from '@/types';
 import { X, Play, CheckCircle2, Clock, Calendar, Users, Flag, MessageSquare, CheckSquare, Plus, Trash2, AlertTriangle, FolderOpen } from 'lucide-react';
 import { generateId } from '@/lib/mock-data';
 import { translateText } from '@/lib/translate';
@@ -43,6 +43,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
 
+  const [formChecklist, setFormChecklist] = useState<ChecklistItem[]>(task?.checklist || []);
   const [isSaving, setIsSaving] = useState(false);
 
   // Update form fields if language changes while viewing an existing task
@@ -53,6 +54,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         name: getMultiLangText(task.name, lang),
         description: getMultiLangText(task.description, lang),
       }));
+      setFormChecklist(task.checklist || []);
     }
   }, [lang, task, isNew]);
 
@@ -117,7 +119,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         actual_end_at: null,
         assignees: form.assignees,
         dependencies: [],
-        checklist: [],
+        checklist: formChecklist,
         delay_tags: [],
         editing_user_id: null,
         editing_started_at: null,
@@ -134,6 +136,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         estimated_lead_days: form.estimated_lead_days,
         planned_start_date: form.planned_start_date,
         planned_end_date: form.planned_end_date,
+        checklist: formChecklist,
       });
     }
     onClose();
@@ -145,20 +148,22 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleAddCheckItem = async () => {
-    if (!newCheckItem.trim() || !task) return;
+    if (!newCheckItem.trim()) return;
     const titleText = newCheckItem;
     const newItemId = generateId();
     const newItem = {
       id: newItemId,
-      task_id: task.id,
+      task_id: task?.id || 'new-task',
       title: titleText,
       is_completed: false,
-      sort_order: task.checklist.length,
+      sort_order: formChecklist.length,
       completed_at: null,
       completed_by: null,
       due_date: null,
+      assignee_id: null,
     };
-    updateTask(task.id, { checklist: [...task.checklist, newItem] });
+    
+    setFormChecklist(prev => [...prev, newItem]);
     setNewCheckItem('');
 
     try {
@@ -174,28 +179,20 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         th_confirmed: true,
       };
       
-      const currentTask = useTaskStore.getState().tasks.find(t => t.id === task.id);
-      if (currentTask) {
-        useTaskStore.getState().updateTask(task.id, {
-          checklist: currentTask.checklist.map(c => c.id === newItemId ? { ...c, title: titleField } : c)
-        });
-      }
+      setFormChecklist(prev => prev.map(c => c.id === newItemId ? { ...c, title: titleField } : c));
     } catch (e) {
       console.error(e);
     }
   };
 
   const saveCheckItemEdit = async (itemId: string) => {
-    if (!task) return;
     const titleText = editCheckItemTitle.trim();
     if (!titleText) {
       setEditingCheckItemId(null);
       return;
     }
 
-    updateTask(task.id, {
-      checklist: task.checklist.map(c => c.id === itemId ? { ...c, title: titleText } : c)
-    });
+    setFormChecklist(prev => prev.map(c => c.id === itemId ? { ...c, title: titleText } : c));
     setEditingCheckItemId(null);
 
     try {
@@ -211,30 +208,22 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         th_confirmed: true,
       };
       
-      const currentTask = useTaskStore.getState().tasks.find(t => t.id === task.id);
-      if (currentTask) {
-        useTaskStore.getState().updateTask(task.id, {
-          checklist: currentTask.checklist.map(c => c.id === itemId ? { ...c, title: titleField } : c)
-        });
-      }
+      setFormChecklist(prev => prev.map(c => c.id === itemId ? { ...c, title: titleField } : c));
     } catch (e) {
       console.error(e);
     }
   };
 
   const toggleCheckItem = (itemId: string) => {
-    if (!task) return;
-    updateTask(task.id, {
-      checklist: task.checklist.map(c =>
-        c.id === itemId ? { ...c, is_completed: !c.is_completed, completed_at: !c.is_completed ? new Date().toISOString() : null } : c
-      ),
-    });
+    setFormChecklist(prev => prev.map(c =>
+      c.id === itemId ? { ...c, is_completed: !c.is_completed, completed_at: !c.is_completed ? new Date().toISOString() : null, completed_by: !c.is_completed ? currentUser?.id || null : null } : c
+    ));
   };
 
   const isOverdue = task?.planned_end_date && task.planned_end_date < today && task.status !== 'done';
 
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="modal-overlay">
       <div className="modal-content w-full max-w-2xl mx-4">
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b border-surface-200 ${isOverdue ? 'bg-red-50' : ''}`}>
@@ -459,75 +448,87 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Checklist (edit mode only) */}
-          {task && (
-            <div>
-              <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                <CheckSquare className="w-3 h-3" /> {t('task.checklist')} ({task.checklist.filter(c => c.is_completed).length}/{task.checklist.length})
-              </label>
-              <div className="space-y-1.5">
-                {task.checklist.map(item => (
-                  <div key={item.id} className="flex items-center gap-2 group">
-                    <button
-                      onClick={() => toggleCheckItem(item.id)}
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                        item.is_completed ? 'bg-primary-500 border-primary-500 text-white' : 'border-surface-300 hover:border-primary-400'
-                      }`}
-                    >
-                      {item.is_completed && <CheckCircle2 className="w-3 h-3" />}
-                    </button>
-                    {editingCheckItemId === item.id ? (
-                      <input
-                        type="text"
-                        autoFocus
-                        value={editCheckItemTitle}
-                        onChange={(e) => setEditCheckItemTitle(e.target.value)}
-                        onBlur={() => saveCheckItemEdit(item.id)}
-                        onKeyDown={(e) => e.key === 'Enter' && saveCheckItemEdit(item.id)}
-                        className="flex-1 text-sm px-1 py-0.5 border border-primary-300 rounded bg-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                      />
-                    ) : (
-                      <span 
-                        className={`text-sm flex-1 cursor-pointer hover:bg-surface-50 px-1 py-0.5 -mx-1 rounded transition-colors ${item.is_completed ? 'text-surface-400 line-through' : 'text-surface-700'}`}
-                        onClick={() => {
-                          setEditingCheckItemId(item.id);
-                          setEditCheckItemTitle(typeof item.title === 'string' ? item.title : getMultiLangText(item.title, lang));
-                        }}
-                      >
-                        {typeof item.title === 'string' ? item.title : getMultiLangText(item.title, lang)}
-                      </span>
-                    )}
+          {/* Subtasks (Checklist) */}
+          <div>
+            <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+              <CheckSquare className="w-3 h-3" /> {t('task.checklist') || 'Subtasks'} ({formChecklist.filter(c => c.is_completed).length}/{formChecklist.length})
+            </label>
+            <div className="space-y-1.5">
+              {formChecklist.map(item => (
+                <div key={item.id} className="flex items-center gap-2 group">
+                  <button
+                    onClick={() => toggleCheckItem(item.id)}
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                      item.is_completed ? 'bg-primary-500 border-primary-500 text-white' : 'border-surface-300 hover:border-primary-400'
+                    }`}
+                  >
+                    {item.is_completed && <CheckCircle2 className="w-3 h-3" />}
+                  </button>
+                  {editingCheckItemId === item.id ? (
                     <input
-                      type="date"
-                      value={item.due_date || ''}
-                      onChange={(e) => updateTask(task.id, {
-                        checklist: task.checklist.map(c => c.id === item.id ? { ...c, due_date: e.target.value || null } : c)
-                      })}
-                      className="px-2 py-1 text-xs rounded-md border border-surface-200 text-surface-500 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500/50"
+                      type="text"
+                      autoFocus
+                      value={editCheckItemTitle}
+                      onChange={(e) => setEditCheckItemTitle(e.target.value)}
+                      onBlur={() => saveCheckItemEdit(item.id)}
+                      onKeyDown={(e) => e.key === 'Enter' && saveCheckItemEdit(item.id)}
+                      className="flex-1 text-sm px-1 py-0.5 border border-primary-300 rounded bg-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
-                    <button
-                      onClick={() => updateTask(task.id, { checklist: task.checklist.filter(c => c.id !== item.id) })}
-                      className="opacity-0 group-hover:opacity-100 text-surface-400 hover:text-danger transition-all"
+                  ) : (
+                    <span 
+                      className={`text-sm flex-1 cursor-pointer hover:bg-surface-50 px-1 py-0.5 -mx-1 rounded transition-colors ${item.is_completed ? 'text-surface-400 line-through' : 'text-surface-700'}`}
+                      onClick={() => {
+                        setEditingCheckItemId(item.id);
+                        setEditCheckItemTitle(typeof item.title === 'string' ? item.title : getMultiLangText(item.title, lang));
+                      }}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-                <div className="flex items-center gap-2 mt-2">
+                      {typeof item.title === 'string' ? item.title : getMultiLangText(item.title, lang)}
+                    </span>
+                  )}
+                  
+                  {/* Assignee */}
+                  <select
+                    value={item.assignee_id || ''}
+                    onChange={(e) => setFormChecklist(prev => prev.map(c => c.id === item.id ? { ...c, assignee_id: e.target.value || null } : c))}
+                    className="w-24 px-1 py-1 text-xs rounded-md border border-surface-200 text-surface-600 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500/50"
+                  >
+                    <option value="">未割当</option>
+                    {users.filter(u => projects.find(p => p.id === form.project_id)?.members.some((m: any) => m.user_id === u.id)).map(u => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </select>
+
+                  {/* Due Date */}
                   <input
-                    type="text"
-                    value={newCheckItem}
-                    onChange={(e) => setNewCheckItem(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddCheckItem()}
-                    placeholder={t('task.addChecklist')}
-                    className="flex-1 px-3 py-1.5 rounded-lg border border-dashed border-surface-300 text-sm bg-transparent focus:outline-none focus:border-primary-400 placeholder:text-surface-300"
+                    type="date"
+                    value={item.due_date || ''}
+                    onChange={(e) => setFormChecklist(prev => prev.map(c => c.id === item.id ? { ...c, due_date: e.target.value || null } : c))}
+                    className="px-1 py-1 text-xs rounded-md border border-surface-200 text-surface-500 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500/50"
                   />
-                  <button onClick={handleAddCheckItem} className="p-1.5 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors">
-                    <Plus className="w-4 h-4" />
+                  
+                  <button
+                    onClick={() => setFormChecklist(prev => prev.filter(c => c.id !== item.id))}
+                    className="opacity-0 group-hover:opacity-100 text-surface-400 hover:text-danger transition-all p-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+              ))}
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="text"
+                  value={newCheckItem}
+                  onChange={(e) => setNewCheckItem(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCheckItem()}
+                  placeholder={t('task.addChecklist') || 'Add Subtask'}
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-dashed border-surface-300 text-sm bg-transparent focus:outline-none focus:border-primary-400 placeholder:text-surface-300"
+                />
+                <button onClick={handleAddCheckItem} className="p-1.5 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors">
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}

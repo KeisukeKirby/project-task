@@ -2,9 +2,9 @@
 
 import React, { useMemo, useState } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
-import { useTaskStore, useProjectStore, useUIStore, useUserStore } from '@/stores';
+import { useTaskStore, useProjectStore, useUIStore, useUserStore, useEventStore } from '@/stores';
 import { STATUS_CONFIG, Project, Task, ChecklistItem } from '@/types';
-import { ZoomIn, ZoomOut, Maximize2, CheckSquare } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, CheckSquare, Settings } from 'lucide-react';
 
 type GanttRow = 
   | { type: 'project'; project: Project; id: string }
@@ -15,11 +15,13 @@ export function GanttView() {
   const { lang, t, formatDate } = useI18n();
   const tasks = useTaskStore((s) => s.tasks);
   const projects = useProjectStore((s) => s.projects);
-  const { openTaskModal } = useUIStore();
+  const { openTaskModal, openProjectModal } = useUIStore();
   const users = useUserStore((s) => s.users);
   const [localSelectedProjectId, setLocalSelectedProjectId] = useState<string | null>(null);
   const [dayWidth, setDayWidth] = useState(32);
   const today = new Date().toISOString().split('T')[0];
+  const events = useEventStore((s) => s.events);
+  const openEventModal = useUIStore((s) => s.openEventModal);
 
   const filteredTasks = localSelectedProjectId
     ? tasks.filter(t => t.project_id === localSelectedProjectId).sort((a, b) => a.sort_order - b.sort_order)
@@ -171,7 +173,7 @@ export function GanttView() {
           {/* Task List (Left Panel) */}
           <div className="w-[240px] min-w-[240px] border-r border-surface-200 bg-white z-10 sticky left-0">
             {/* Header */}
-            <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1">
+            <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1 sticky top-0 bg-white z-20">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">{t('task.title')}</span>
                 <select
@@ -195,8 +197,15 @@ export function GanttView() {
                     className="flex items-center gap-2 px-4 border-b border-surface-200 bg-surface-50/80"
                     style={{ height: ROW_HEIGHT }}
                   >
-                    <span className="text-sm font-bold text-surface-900 truncate flex-1">
+                    <span className="text-sm font-bold text-surface-900 truncate flex-1 flex items-center gap-2">
                       {getMultiLangText(row.project.name, lang)}
+                      <button
+                        onClick={() => openProjectModal(row.project.id)}
+                        className="p-1 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                        title={t('project.edit')}
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                      </button>
                     </span>
                   </div>
                 );
@@ -245,7 +254,7 @@ export function GanttView() {
           </div>
 
           {/* Timeline (Right Panel) */}
-          <div className="flex-1 overflow-x-auto relative">
+          <div className="flex-1 relative">
             {/* Month Headers */}
             <div className="h-[30px] flex border-b border-surface-200 sticky top-0 bg-white z-[5]">
               {months.map((m, i) => (
@@ -265,12 +274,13 @@ export function GanttView() {
                 return (
                   <div
                     key={d}
-                    className={`flex items-center justify-center text-[10px] border-r border-surface-50 flex-shrink-0 ${
+                    className={`flex items-center justify-center text-[10px] border-r border-surface-50 flex-shrink-0 cursor-pointer hover:bg-surface-100 transition-colors ${
                       isToday ? 'bg-primary-50 text-primary-700 font-bold' :
                       isWeekend ? 'bg-surface-50 text-surface-400' :
                       'text-surface-500'
                     }`}
                     style={{ width: dayWidth, minWidth: dayWidth }}
+                    onClick={() => openEventModal(d)}
                   >
                     {date.getDate()}
                   </div>
@@ -297,6 +307,44 @@ export function GanttView() {
                   );
                 })}
               </div>
+
+              {/* Events */}
+              {events.map((event) => {
+                const eventOffset = Math.ceil((new Date(event.date).getTime() - new Date(dateRange.start).getTime()) / 86400000);
+                if (eventOffset < 0 || eventOffset >= totalDays) return null; // out of view
+
+                let top = 0;
+                let height = ganttRows.length * ROW_HEIGHT;
+
+                if (event.project_id) {
+                  const startIdx = ganttRows.findIndex(r => r.type === 'project' && r.project.id === event.project_id);
+                  if (startIdx === -1) return null; // Project not shown
+                  let endIdx = ganttRows.findIndex((r, i) => i > startIdx && r.type === 'project');
+                  if (endIdx === -1) endIdx = ganttRows.length;
+                  
+                  top = startIdx * ROW_HEIGHT;
+                  height = (endIdx - startIdx) * ROW_HEIGHT;
+                }
+
+                return (
+                  <div
+                    key={event.id}
+                    className="absolute z-[2] opacity-20 pointer-events-none border-l-2"
+                    style={{
+                      left: eventOffset * dayWidth,
+                      width: dayWidth,
+                      top,
+                      height,
+                      backgroundColor: event.color,
+                      borderColor: event.color,
+                    }}
+                  >
+                    <div className="absolute top-1 left-1.5 whitespace-nowrap text-[10px] font-bold opacity-100" style={{ color: event.color }}>
+                      {event.title}
+                    </div>
+                  </div>
+                );
+              })}
 
               {/* Today marker */}
               <div

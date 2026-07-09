@@ -7,7 +7,7 @@ import type { Language, ViewMode, User } from '@/types';
 import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard, ListTodo, Columns3, BarChart3, Calendar,
-  FileText, Settings, ChevronLeft, Menu, Plus, Search,
+  FileText, Settings, Settings as SettingsIcon, ChevronLeft, Menu, Plus, Search,
   AlertCircle, Clock, FolderOpen, LogOut, Bell
 } from 'lucide-react';
 import { OverviewDashboard } from '@/components/views/OverviewDashboard';
@@ -17,6 +17,7 @@ import { GanttView } from '@/components/views/GanttView';
 import { CalendarView } from '@/components/views/CalendarView';
 import { TaskModal } from '@/components/modals/TaskModal';
 import { ProjectModal } from '@/components/modals/ProjectModal';
+import { EventModal } from '@/components/modals/EventModal';
 import { CsvImportButton } from '@/components/ui/CsvImportButton';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
 
@@ -47,6 +48,7 @@ export function DashboardShell() {
     selectedProjectId, setSelectedProjectId,
     taskModalOpen, closeTaskModal, openTaskModal,
     projectModalOpen, openProjectModal, closeProjectModal,
+    eventModalOpen,
   } = useUIStore();
   const { currentUser, setCurrentUser } = useUserStore();
   const projects = useProjectStore((s) => s.projects);
@@ -54,6 +56,7 @@ export function DashboardShell() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showUserSelect, setShowUserSelect] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   
   // Use supabase for auth session fetching
 
@@ -76,6 +79,7 @@ export function DashboardShell() {
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser('');
         setShowUserSelect(true);
+        setUserMenuOpen(false);
       }
     });
 
@@ -87,6 +91,12 @@ export function DashboardShell() {
   const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
     if (!error && data) {
+      // Map mktbarefootincth@gmail.com to the Beer mock user
+      if (data.email === 'mktbarefootincth@gmail.com') {
+        data.id = 'user-beer';
+        data.name = 'Beer';
+      }
+
       // Create a mock users list for UI fallback if not populated
       useUserStore.setState((state) => {
         const exists = state.users.find(u => u.id === data.id);
@@ -244,21 +254,36 @@ export function DashboardShell() {
             const doneTasks = projTasks.filter(t => t.status === 'done');
             const progress = projTasks.length > 0 ? Math.round((doneTasks.length / projTasks.length) * 100) : 0;
             return (
-              <button
+              <div
                 key={proj.id}
-                onClick={() => {
-                  setSelectedProjectId(proj.id);
-                  setViewMode('kanban');
-                  setMobileSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-surface-600 hover:bg-surface-50 transition-all group ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-surface-600 hover:bg-surface-50 transition-all group cursor-pointer ${
                   selectedProjectId === proj.id ? 'bg-surface-50' : ''
                 }`}
               >
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
-                <span className="text-sm truncate flex-1 text-left">{getMultiLangText(proj.name, lang)}</span>
-                <span className="text-[10px] text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity">{progress}%</span>
-              </button>
+                <div
+                  className="flex-1 flex items-center gap-3"
+                  onClick={() => {
+                    setSelectedProjectId(proj.id);
+                    setViewMode('kanban');
+                    setMobileSidebarOpen(false);
+                  }}
+                >
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: proj.color }} />
+                  <span className="text-sm truncate flex-1 text-left">{getMultiLangText(proj.name, lang)}</span>
+                </div>
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[10px] text-surface-400">{progress}%</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openProjectModal(proj.id);
+                    }}
+                    className="p-1 text-surface-400 hover:text-primary-600 rounded transition-colors"
+                  >
+                    <SettingsIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             );
           })}
         </nav>
@@ -267,7 +292,7 @@ export function DashboardShell() {
         {!sidebarCollapsed && (
           <div className="p-3 border-t border-surface-100 flex-shrink-0">
             <button
-              onClick={openProjectModal}
+              onClick={() => openProjectModal()}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-primary-600 hover:bg-primary-50 transition-all"
             >
               <Plus className="w-4 h-4" />
@@ -346,23 +371,54 @@ export function DashboardShell() {
             </button>
           </div>
 
-          {/* User Avatar */}
-          <button
-            onClick={() => setShowUserSelect(true)}
-            className="flex items-center gap-2 group"
-          >
-            <div
-              className="avatar"
-              style={{ backgroundColor: getAvatarColor(currentUser.id) }}
+          {/* User Avatar & Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2 group p-1 rounded-lg hover:bg-surface-50 transition-colors"
             >
-              {currentUser.name.charAt(0).toUpperCase()}
-            </div>
-            {!sidebarCollapsed && (
-              <span className="text-sm font-medium text-surface-700 hidden lg:block group-hover:text-primary-600 transition-colors">
-                {currentUser.name}
-              </span>
+              <div
+                className="avatar"
+                style={{ backgroundColor: getAvatarColor(currentUser.id) }}
+              >
+                {currentUser.name.charAt(0).toUpperCase()}
+              </div>
+              {!sidebarCollapsed && (
+                <span className="text-sm font-medium text-surface-700 hidden lg:block group-hover:text-primary-600 transition-colors">
+                  {currentUser.name}
+                </span>
+              )}
+            </button>
+            
+            {userMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setUserMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-surface-100 py-1 z-50">
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      setShowUserSelect(true);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 hover:text-primary-600 transition-colors"
+                  >
+                    Switch Account
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setUserMenuOpen(false);
+                      await supabase.auth.signOut();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-red-50 transition-colors"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              </>
             )}
-          </button>
+          </div>
         </header>
 
         {/* Content */}
@@ -376,6 +432,7 @@ export function DashboardShell() {
       {/* ═══ Modals ═══ */}
       {taskModalOpen && <TaskModal onClose={closeTaskModal} />}
       {projectModalOpen && <ProjectModal onClose={closeProjectModal} />}
+      {eventModalOpen && <EventModal />}
     </div>
   );
 }

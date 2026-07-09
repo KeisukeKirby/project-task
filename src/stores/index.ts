@@ -286,8 +286,13 @@ interface UIStore {
   openTaskModal: (taskId?: string) => void;
   closeTaskModal: () => void;
   projectModalOpen: boolean;
-  openProjectModal: () => void;
+  projectModalId: string | null;
+  openProjectModal: (id?: string) => void;
   closeProjectModal: () => void;
+  eventModalOpen: boolean;
+  eventModalDate: string | null;
+  openEventModal: (date: string) => void;
+  closeEventModal: () => void;
 }
 
 const defaultFilters: ViewFilters = {
@@ -314,6 +319,48 @@ export const useUIStore = create<UIStore>()((set) => ({
   openTaskModal: (taskId) => set({ taskModalOpen: true, taskModalId: taskId || null }),
   closeTaskModal: () => set({ taskModalOpen: false, taskModalId: null }),
   projectModalOpen: false,
-  openProjectModal: () => set({ projectModalOpen: true }),
-  closeProjectModal: () => set({ projectModalOpen: false }),
+  projectModalId: null,
+  openProjectModal: (id?: string) => set({ projectModalOpen: true, projectModalId: id || null }),
+  closeProjectModal: () => set({ projectModalOpen: false, projectModalId: null }),
+  eventModalOpen: false,
+  eventModalDate: null,
+  openEventModal: (date: string) => set({ eventModalOpen: true, eventModalDate: date }),
+  closeEventModal: () => set({ eventModalOpen: false, eventModalDate: null }),
 }));
+
+// ── Event Store ──
+
+import { ProjectEvent } from '@/types';
+
+interface EventStore {
+  events: ProjectEvent[];
+  addEvent: (event: Omit<ProjectEvent, 'id' | 'created_at'>) => ProjectEvent;
+  updateEvent: (id: string, updates: Partial<ProjectEvent>) => void;
+  deleteEvent: (id: string) => void;
+}
+
+export const useEventStore = create<EventStore>()(
+  persist(
+    (set) => ({
+      events: [],
+      addEvent: (data) => {
+        const newEvent: ProjectEvent = {
+          ...data,
+          id: generateId(),
+          created_at: new Date().toISOString(),
+        };
+        set((state) => ({ events: [...state.events, newEvent] }));
+        return newEvent;
+      },
+      updateEvent: (id, updates) =>
+        set((state) => ({
+          events: state.events.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+        })),
+      deleteEvent: (id) =>
+        set((state) => ({
+          events: state.events.filter((e) => e.id !== id),
+        })),
+    }),
+    { name: 'projecthub-events' }
+  )
+);

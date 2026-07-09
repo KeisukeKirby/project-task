@@ -5,7 +5,7 @@ import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
 import { getAvatarColor } from '@/components/layout/DashboardShell';
 import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus } from '@/types';
-import { Clock, AlertTriangle, GripVertical, Trash2 } from 'lucide-react';
+import { Clock, AlertTriangle, GripVertical, Trash2, Settings } from 'lucide-react';
 
 const KANBAN_COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'revision', 'done'];
 
@@ -15,7 +15,7 @@ export function KanbanView() {
   const updateTask = useTaskStore((s) => s.updateTask);
   const projects = useProjectStore((s) => s.projects);
   const users = useUserStore((s) => s.users);
-  const { selectedProjectId, openTaskModal } = useUIStore();
+  const { selectedProjectId, openTaskModal, openProjectModal } = useUIStore();
   const today = new Date().toISOString().split('T')[0];
 
   const filteredTasks = selectedProjectId
@@ -100,13 +100,22 @@ export function KanbanView() {
                     className="text-lg font-bold text-surface-900 bg-transparent border-b-2 border-primary-500 focus:outline-none px-1 py-0"
                   />
                 ) : (
-                  <h2 
-                    className="text-lg font-bold text-surface-900 hover:text-primary-600 cursor-pointer transition-colors"
-                    onClick={() => handleNameEdit(proj)}
-                    title={t('common.edit')}
-                  >
-                    {getMultiLangText(proj.name, lang)}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 
+                      className="text-lg font-bold text-surface-900 hover:text-primary-600 cursor-pointer transition-colors"
+                      onClick={() => handleNameEdit(proj)}
+                      title={t('common.edit')}
+                    >
+                      {getMultiLangText(proj.name, lang)}
+                    </h2>
+                    <button
+                      onClick={() => openProjectModal(proj.id)}
+                      className="p-1.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                      title={t('project.edit')}
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
                 <button
                   onClick={() => useUIStore.getState().setSelectedProjectId(null)}

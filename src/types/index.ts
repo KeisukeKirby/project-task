@@ -73,6 +73,15 @@ export interface ProjectMember {
   joined_at: string;
 }
 
+export interface ProjectEvent {
+  id: string;
+  project_id: string | null; // null means "All Projects"
+  title: string;
+  date: string; // ISO date string YYYY-MM-DD
+  color: string;
+  created_at: string;
+}
+
 // ── Task Template ──
 
 export interface TaskTemplate {
@@ -143,6 +152,7 @@ export interface ChecklistItem {
   completed_at: string | null;
   completed_by: string | null;
   due_date?: string | null;
+  assignee_id?: string | null;
 }
 
 // ── Comment ──
