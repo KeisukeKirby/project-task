@@ -171,34 +171,19 @@ export function GanttView() {
           {/* Task List (Left Panel) */}
           <div className="w-[240px] min-w-[240px] border-r border-surface-200 bg-white z-10 sticky left-0">
             {/* Header */}
-            <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1.5 overflow-hidden">
-              <span className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">{t('task.title')}</span>
-              
-              {/* Project Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full pb-0.5" style={{ scrollbarWidth: 'none' }}>
-                <button
-                  onClick={() => setLocalSelectedProjectId(null)}
-                  className={`flex-shrink-0 px-2.5 py-0.5 text-[10px] rounded-full font-medium transition-colors border ${
-                    !localSelectedProjectId 
-                      ? 'bg-primary-50 border-primary-200 text-primary-700' 
-                      : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
-                  }`}
+            <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">{t('task.title')}</span>
+                <select
+                  value={localSelectedProjectId || ''}
+                  onChange={(e) => setLocalSelectedProjectId(e.target.value || null)}
+                  className="bg-surface-50 border border-surface-200 text-[10px] text-surface-700 rounded px-1.5 py-0.5 outline-none focus:border-primary-500 max-w-[140px] truncate"
                 >
-                  {t('common.all') || 'All'}
-                </button>
-                {projects.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setLocalSelectedProjectId(p.id)}
-                    className={`flex-shrink-0 px-2.5 py-0.5 text-[10px] rounded-full font-medium transition-colors border ${
-                      localSelectedProjectId === p.id 
-                        ? 'bg-primary-50 border-primary-200 text-primary-700' 
-                        : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
-                    }`}
-                  >
-                    {getMultiLangText(p.name, lang)}
-                  </button>
-                ))}
+                  <option value="">{t('common.all') || 'All Projects'}</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{getMultiLangText(p.name, lang)}</option>
+                  ))}
+                </select>
               </div>
             </div>
             {/* Rows */}
