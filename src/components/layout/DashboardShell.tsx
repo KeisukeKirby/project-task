@@ -66,7 +66,7 @@ export function DashboardShell() {
     // Check active session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user.id, session.user.email);
       } else {
         setShowUserSelect(true);
       }
@@ -75,7 +75,7 @@ export function DashboardShell() {
     // Listen for auth state changes (login, logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user.id, session.user.email);
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser('');
         setShowUserSelect(true);
@@ -88,22 +88,37 @@ export function DashboardShell() {
     };
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, email?: string) => {
+    // Map mktbarefootincth@gmail.com directly to the Beer mock user without requiring a public.users row
+    if (email === 'mktbarefootincth@gmail.com') {
+      const beerUser = {
+        id: 'user-beer',
+        name: 'Beer',
+        email: email,
+        role: 'member',
+        preferred_language: 'ja'
+      };
+      useUserStore.setState((state) => {
+        const exists = state.users.find(u => u.id === 'user-beer');
+        if (!exists) {
+          return { users: [...state.users, beerUser as any], currentUser: beerUser as any };
+        }
+        return { currentUser: beerUser as any };
+      });
+      setShowUserSelect(false);
+      import('@/stores/supabaseSync').then((m) => m.initSupabaseSync());
+      return;
+    }
+
     const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
     if (!error && data) {
-      // Map mktbarefootincth@gmail.com to the Beer mock user
-      if (data.email === 'mktbarefootincth@gmail.com') {
-        data.id = 'user-beer';
-        data.name = 'Beer';
-      }
-
       // Create a mock users list for UI fallback if not populated
       useUserStore.setState((state) => {
         const exists = state.users.find(u => u.id === data.id);
         if (!exists) {
-          return { users: [...state.users, data as User], currentUser: data as User };
+          return { users: [...state.users, data as any], currentUser: data as any };
         }
-        return { currentUser: data as User };
+        return { currentUser: data as any };
       });
       setShowUserSelect(false);
       
