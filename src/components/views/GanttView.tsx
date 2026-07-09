@@ -289,7 +289,7 @@ export function GanttView() {
             </div>
 
             {/* Task Bars */}
-            <div className="relative" style={{ width: totalDays * dayWidth }}>
+            <div className="relative" style={{ width: totalDays * dayWidth, height: ganttRows.length * ROW_HEIGHT }}>
               {/* Background columns */}
               <div className="absolute inset-0 flex pointer-events-none">
                 {dayDates.map((d) => {
