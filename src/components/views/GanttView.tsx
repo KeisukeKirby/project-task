@@ -232,7 +232,7 @@ export function GanttView() {
                   <span className="status-dot flex-shrink-0" style={{ backgroundColor: statusConf.color, width: '8px', height: '8px' }} />
                   {assignee && (
                     <span className="text-[10px] text-surface-500 font-medium px-1.5 py-0.5 bg-surface-100 rounded flex-shrink-0 max-w-[60px] truncate" title={assignee.name}>
-                      @{assignee.name}
+                      {assignee.name}
                     </span>
                   )}
                   <span className="text-xs text-surface-700 truncate flex-1 font-medium">
