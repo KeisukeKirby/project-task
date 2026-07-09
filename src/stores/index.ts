@@ -4,6 +4,7 @@
 // ============================================================
 
 import { create } from 'zustand';
+import { supabase } from '@/lib/supabase';
 import { persist } from 'zustand/middleware';
 import type { Project, Task, TaskTemplate, User, TaskStatus, ViewMode, ViewFilters, Language } from '@/types';
 import { MOCK_USERS, MOCK_TEMPLATES, SAMPLE_DATA, generateId, generateTasksFromTemplate, backwardSchedule } from '@/lib/mock-data';
@@ -18,10 +19,8 @@ interface ProjectStore {
   getProject: (id: string) => Project | undefined;
 }
 
-export const useProjectStore = create<ProjectStore>()(
-  persist(
-    (set, get) => ({
-      projects: SAMPLE_DATA.projects,
+export const useProjectStore = create<ProjectStore>()((set, get) => ({
+      projects: [],
 
       addProject: (data) => {
         const project: Project = {
@@ -31,6 +30,7 @@ export const useProjectStore = create<ProjectStore>()(
           updated_at: new Date().toISOString(),
         };
         set((state) => ({ projects: [...state.projects, project] }));
+        supabase.from('projects').insert([project]).then(({error}) => { if(error) console.error(error); });
         return project;
       },
 
@@ -40,21 +40,19 @@ export const useProjectStore = create<ProjectStore>()(
             p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p
           ),
         }));
+        supabase.from('projects').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({error}) => { if(error) console.error(error); });
       },
 
       deleteProject: (id) => {
         set((state) => ({
           projects: state.projects.filter((p) => p.id !== id),
         }));
-        // Also delete associated tasks
         useTaskStore.getState().deleteTasksByProject(id);
+        supabase.from('projects').delete().eq('id', id).then(({error}) => { if(error) console.error(error); });
       },
 
       getProject: (id) => get().projects.find((p) => p.id === id),
-    }),
-    { name: 'projecthub-projects' }
-  )
-);
+    }));
 
 // ── Task Store ──
 
@@ -73,10 +71,8 @@ interface TaskStore {
   recalculateSchedule: (projectId: string, deadline: string) => void;
 }
 
-export const useTaskStore = create<TaskStore>()(
-  persist(
-    (set, get) => ({
-      tasks: SAMPLE_DATA.tasks,
+export const useTaskStore = create<TaskStore>()((set, get) => ({
+      tasks: [],
 
       addTask: (data) => {
         const task: Task = {
@@ -86,6 +82,7 @@ export const useTaskStore = create<TaskStore>()(
           updated_at: new Date().toISOString(),
         };
         set((state) => ({ tasks: [...state.tasks, task] }));
+        supabase.from('tasks').insert([task]).then(({error}) => { if(error) console.error(error); });
         return task;
       },
 
@@ -95,14 +92,17 @@ export const useTaskStore = create<TaskStore>()(
             t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t
           ),
         }));
+        supabase.from('tasks').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({error}) => { if(error) console.error(error); });
       },
 
       deleteTask: (id) => {
         set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+        supabase.from('tasks').delete().eq('id', id).then(({error}) => { if(error) console.error(error); });
       },
 
       deleteTasksByProject: (projectId) => {
         set((state) => ({ tasks: state.tasks.filter((t) => t.project_id !== projectId) }));
+        supabase.from('tasks').delete().eq('project_id', projectId).then(({error}) => { if(error) console.error(error); });
       },
 
       getTask: (id) => get().tasks.find((t) => t.id === id),
@@ -184,10 +184,7 @@ export const useTaskStore = create<TaskStore>()(
           }),
         }));
       },
-    }),
-    { name: 'projecthub-tasks' }
-  )
-);
+    }));
 
 // ── Template Store ──
 
@@ -226,20 +223,15 @@ interface UserStore {
   getUser: (id: string) => User | undefined;
 }
 
-export const useUserStore = create<UserStore>()(
-  persist(
-    (set, get) => ({
-      users: MOCK_USERS,
+export const useUserStore = create<UserStore>()((set, get) => ({
+      users: [],
       currentUser: null,
       setCurrentUser: (userId) => {
         const user = get().users.find((u) => u.id === userId) || null;
         set({ currentUser: user });
       },
       getUser: (id) => get().users.find((u) => u.id === id),
-    }),
-    { name: 'projecthub-user' }
-  )
-);
+    }));
 
 // ── UI Store ──
 

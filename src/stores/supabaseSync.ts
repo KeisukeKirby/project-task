@@ -1,0 +1,58 @@
+import { supabase } from '@/lib/supabase';
+import { useProjectStore, useTaskStore, useUserStore } from './index';
+
+export async function initSupabaseSync() {
+  console.log('Initializing Supabase Sync...');
+
+  // 1. Initial Fetch
+  const [usersRes, projectsRes, tasksRes] = await Promise.all([
+    supabase.from('users').select('*'),
+    supabase.from('projects').select('*'),
+    supabase.from('tasks').select('*')
+  ]);
+
+  if (usersRes.data) useUserStore.setState({ users: usersRes.data });
+  if (projectsRes.data) useProjectStore.setState({ projects: projectsRes.data });
+  if (tasksRes.data) useTaskStore.setState({ tasks: tasksRes.data });
+
+  // 2. Setup Realtime Subscriptions
+  supabase
+    .channel('public-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, (payload) => {
+      if (payload.eventType === 'INSERT') {
+        useProjectStore.setState(s => {
+          if (!s.projects.find(p => p.id === payload.new.id)) {
+            return { projects: [...s.projects, payload.new as any] };
+          }
+          return s;
+        });
+      } else if (payload.eventType === 'UPDATE') {
+        useProjectStore.setState(s => ({
+          projects: s.projects.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p)
+        }));
+      } else if (payload.eventType === 'DELETE') {
+        useProjectStore.setState(s => ({
+          projects: s.projects.filter(p => p.id !== payload.old.id)
+        }));
+      }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+      if (payload.eventType === 'INSERT') {
+        useTaskStore.setState(s => {
+          if (!s.tasks.find(t => t.id === payload.new.id)) {
+            return { tasks: [...s.tasks, payload.new as any] };
+          }
+          return s;
+        });
+      } else if (payload.eventType === 'UPDATE') {
+        useTaskStore.setState(s => ({
+          tasks: s.tasks.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t)
+        }));
+      } else if (payload.eventType === 'DELETE') {
+        useTaskStore.setState(s => ({
+          tasks: s.tasks.filter(t => t.id !== payload.old.id)
+        }));
+      }
+    })
+    .subscribe();
+}

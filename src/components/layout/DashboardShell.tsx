@@ -96,6 +96,8 @@ export function DashboardShell() {
         return { currentUser: data as User };
       });
       setShowUserSelect(false);
+      
+      import('@/stores/supabaseSync').then((m) => m.initSupabaseSync());
     } else {
       setShowUserSelect(true);
     }
