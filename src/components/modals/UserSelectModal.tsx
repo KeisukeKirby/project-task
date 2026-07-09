@@ -38,23 +38,6 @@ export function UserSelectModal() {
           }
         });
         if (signUpError) throw signUpError;
-        
-        // If sign up is successful, insert into public.users table (trigger or manual)
-        // Here we do it manually for simplicity if no trigger is set
-        if (authData.user) {
-          const { error: insertError } = await supabase.from('users').insert([{
-            id: authData.user.id,
-            email: email,
-            name: name,
-            role: 'member',
-            preferred_language: lang
-          }]);
-          
-          if (insertError) {
-             // 23505 is unique violation, meaning the user already exists in public.users
-             if (insertError.code !== '23505') throw insertError;
-          }
-        }
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
