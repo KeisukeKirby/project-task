@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { persist } from 'zustand/middleware';
-import type { Project, Task, TaskTemplate, User, TaskStatus, ViewMode, ViewFilters, Language } from '@/types';
+import type { Project, Task, TaskTemplate, User, TaskStatus, ViewMode, ViewFilters, Language, TaskActivity } from '@/types';
 import { MOCK_USERS, MOCK_TEMPLATES, SAMPLE_DATA, generateId, generateTasksFromTemplate, backwardSchedule } from '@/lib/mock-data';
 
 // ── Project Store ──
