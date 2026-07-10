@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useUIStore, useUserStore, useProjectStore, useTaskStore } from '@/stores';
 import type { Language, ViewMode, User } from '@/types';
+import { getAvatarColor } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard, ListTodo, Columns3, BarChart3, Calendar,
@@ -29,17 +30,7 @@ const NAV_ITEMS: { key: ViewMode; icon: React.ElementType; labelKey: string }[] 
   { key: 'calendar', icon: Calendar, labelKey: 'nav.calendar' },
 ];
 
-const AVATAR_COLORS: Record<string, string> = {
-  'user-shimada': '#6366f1',
-  'user-hoshino': '#8b5cf6',
-  'user-bew': '#ec4899',
-  'user-aod': '#10b981',
-  'user-beer': '#f59e0b',
-};
 
-export function getAvatarColor(userId: string): string {
-  return AVATAR_COLORS[userId] || '#6366f1';
-}
 
 export function DashboardShell() {
   const { lang, setLang, t } = useI18n();

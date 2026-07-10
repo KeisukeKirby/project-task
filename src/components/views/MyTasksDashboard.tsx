@@ -3,7 +3,7 @@
 import React from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useUserStore, useProjectStore, useUIStore } from '@/stores';
-import { getAvatarColor } from '@/components/layout/DashboardShell';
+import { getAvatarColor } from '@/lib/utils';
 import { Play, CheckCircle2, Clock, AlertTriangle, Calendar, ArrowUpRight, RotateCcw } from 'lucide-react';
 import { STATUS_CONFIG, PRIORITY_CONFIG } from '@/types';
 

@@ -3,7 +3,7 @@
 import React from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useProjectStore, useTaskStore, useUserStore, useUIStore } from '@/stores';
-import { getAvatarColor } from '@/components/layout/DashboardShell';
+import { getAvatarColor } from '@/lib/utils';
 import { BarChart3, TrendingUp, AlertTriangle, CheckCircle2, Clock, FolderOpen, ArrowRight, Zap } from 'lucide-react';
 
 export function OverviewDashboard() {

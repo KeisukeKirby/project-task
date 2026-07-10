@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useProjectStore, useTaskStore, useTemplateStore, useUserStore, useUIStore } from '@/stores';
-import { getAvatarColor } from '@/components/layout/DashboardShell';
+import { getAvatarColor } from '@/lib/utils';
 import { X, Calendar, FileText, Palette, Users } from 'lucide-react';
 import type { Language, ProjectStatus } from '@/types';
 import { PROJECT_STATUS_CONFIG } from '@/types';

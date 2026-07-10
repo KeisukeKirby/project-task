@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
-import { getAvatarColor } from '@/components/layout/DashboardShell';
+import { getAvatarColor } from '@/lib/utils';
 import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type Language, type ChecklistItem } from '@/types';
 import { X, Play, CheckCircle2, Clock, Calendar, Users, Flag, MessageSquare, CheckSquare, Plus, Trash2, AlertTriangle, FolderOpen, History } from 'lucide-react';
 import { generateId } from '@/lib/mock-data';
