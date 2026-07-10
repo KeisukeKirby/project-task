@@ -335,9 +335,11 @@ export function DashboardShell() {
           </button>
 
           {/* Page title */}
-          <h1 className="text-lg font-bold text-surface-900 hidden sm:block">
-            {t(`nav.${viewMode === 'my-tasks' ? 'myTasks' : viewMode}`)}
-          </h1>
+          {viewMode !== 'gantt' && (
+            <h1 className="text-lg font-bold text-surface-900 hidden sm:block">
+              {t(`nav.${viewMode === 'my-tasks' ? 'myTasks' : viewMode}`)}
+            </h1>
+          )}
 
           {/* Search */}
           <div className="flex-1 max-w-md mx-auto sm:mx-0">

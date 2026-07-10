@@ -231,6 +231,9 @@ export function GanttView() {
               const statusConf = STATUS_CONFIG[row.task.status];
               const assignee = row.task.assignees[0] ? users.find(u => u.id === row.task.assignees[0]) : null;
               
+              const isOverdueTask = row.task.planned_end_date && row.task.planned_end_date < new Date().toISOString().split('T')[0] && row.task.status !== 'done';
+              const isCompletedTask = row.task.status === 'done';
+
               return (
                 <div
                   key={row.id}
@@ -238,7 +241,13 @@ export function GanttView() {
                   style={{ height: ROW_HEIGHT }}
                   onClick={() => openTaskModal(row.task.id)}
                 >
-                  <span className="status-dot flex-shrink-0" style={{ backgroundColor: statusConf.color, width: '8px', height: '8px' }} />
+                  {isCompletedTask ? (
+                    <span className="flex-shrink-0 text-[10px]">✅</span>
+                  ) : isOverdueTask ? (
+                    <span className="flex-shrink-0 text-[10px]">⚠</span>
+                  ) : (
+                    <span className="status-dot flex-shrink-0" style={{ backgroundColor: statusConf.color, width: '8px', height: '8px' }} />
+                  )}
                   {assignee && (
                     <span className="text-[10px] text-surface-500 font-medium px-1.5 py-0.5 bg-surface-100 rounded flex-shrink-0 max-w-[60px] truncate" title={assignee.name}>
                       {assignee.name}
@@ -430,8 +439,10 @@ export function GanttView() {
                         title={`${getMultiLangText(task.name, lang)} (${task.estimated_lead_days}d)`}
                       >
                         {barStyle.width > 50 && (
-                          <span className="truncate drop-shadow-sm">{getMultiLangText(task.name, lang)}</span>
+                          <span className="truncate drop-shadow-sm flex-1">{getMultiLangText(task.name, lang)}</span>
                         )}
+                        {task.status === 'done' && <span className="absolute top-0 right-1 text-[9px] drop-shadow-sm">✅</span>}
+                        {isOverdue && <span className="absolute top-0 right-1 text-[9px] drop-shadow-sm text-yellow-300">⚠</span>}
                       </div>
                     )}
 
