@@ -5,6 +5,7 @@ import { useI18n, getMultiLangText } from '@/i18n';
 import { useUIStore, useUserStore, useProjectStore, useTaskStore } from '@/stores';
 import type { Language, ViewMode, User } from '@/types';
 import { getAvatarColor } from '@/lib/utils';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard, ListTodo, Columns3, BarChart3, Calendar,
@@ -119,6 +120,10 @@ export function DashboardShell() {
     }
   };
 
+  // BYPASS AUTH LOCALLY
+  // if (!session) {
+  //  return <AuthScreen />;
+  // }
   if (!mounted) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-surface-50">
@@ -438,7 +443,11 @@ export function DashboardShell() {
       </div>
 
       {/* ═══ Modals ═══ */}
-      {taskModalOpen && <TaskModal onClose={closeTaskModal} />}
+      {taskModalOpen && (
+        <ErrorBoundary>
+          <TaskModal onClose={closeTaskModal} />
+        </ErrorBoundary>
+      )}
       {projectModalOpen && <ProjectModal onClose={closeProjectModal} />}
       {eventModalOpen && <EventModal />}
     </div>

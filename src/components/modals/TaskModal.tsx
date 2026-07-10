@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
 import { getAvatarColor } from '@/lib/utils';
-import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type Language, type ChecklistItem } from '@/types';
+import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type Language, type ChecklistItem, type Task } from '@/types';
 import { X, Play, CheckCircle2, Clock, Calendar, Users, Flag, MessageSquare, CheckSquare, Plus, Trash2, AlertTriangle, FolderOpen, History } from 'lucide-react';
 import { generateId } from '@/lib/mock-data';
 import { translateText } from '@/lib/translate';
@@ -27,16 +27,21 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const isNew = !taskModalId;
 
   const [form, setForm] = useState({
-    name: task?.name ? getMultiLangText(task.name, lang) : '',
-    description: task?.description ? getMultiLangText(task.description, lang) : '',
-    status: task?.status || 'todo' as TaskStatus,
-    priority: task?.priority || 'medium' as Priority,
+    name: task?.name ? (typeof task.name === 'string' ? task.name : getMultiLangText(task.name as any, lang)) : '',
+    description: task?.description ? (typeof task.description === 'string' ? task.description : getMultiLangText(task.description as any, lang)) : '',
+    status: task?.status || 'todo',
+    priority: task?.priority || 'medium',
     project_id: task?.project_id || projects[0]?.id || '',
-    assignees: task?.assignees || (currentUser ? [currentUser.id] : []),
+    assignees: (Array.isArray(task?.assignees) ? task.assignees : (typeof task?.assignees === 'string' ? JSON.parse(task.assignees) : (currentUser ? [currentUser.id] : []))) as string[],
+    planned_start_date: task?.planned_start_date || new Date().toISOString().split('T')[0],
+    planned_end_date: task?.planned_end_date || new Date().toISOString().split('T')[0],
     estimated_lead_days: task?.estimated_lead_days || 1,
-    planned_start_date: task?.planned_start_date || today,
-    planned_end_date: task?.planned_end_date || today,
   });
+
+  const [formChecklist, setFormChecklist] = useState<ChecklistItem[]>(
+    Array.isArray(task?.checklist) ? task.checklist : (typeof task?.checklist === 'string' ? JSON.parse(task.checklist) : [])
+  );
+  
   const [newCheckItem, setNewCheckItem] = useState('');
   const [editingCheckItemId, setEditingCheckItemId] = useState<string | null>(null);
   const [editCheckItemTitle, setEditCheckItemTitle] = useState('');
@@ -44,7 +49,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
 
-  const [formChecklist, setFormChecklist] = useState<ChecklistItem[]>(task?.checklist || []);
+
   const [isSaving, setIsSaving] = useState(false);
 
   // Update form fields if language changes while viewing an existing task
@@ -494,7 +499,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                     className="w-24 px-1 py-1 text-xs rounded-md border border-surface-200 text-surface-600 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500/50"
                   >
                     <option value="">未割当</option>
-                    {users.filter(u => projects.find(p => p.id === form.project_id)?.members.some((m: any) => m.user_id === u.id)).map(u => (
+                    {users.filter(u => projects.find(p => p.id === form.project_id)?.members?.some((m: any) => m.user_id === u.id)).map(u => (
                       <option key={u.id} value={u.id}>{u.name}</option>
                     ))}
                   </select>
