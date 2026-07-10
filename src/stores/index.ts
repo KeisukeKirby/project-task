@@ -338,7 +338,7 @@ const defaultFilters: ViewFilters = {
 };
 
 export const useUIStore = create<UIStore>()((set) => ({
-  viewMode: 'overview',
+  viewMode: 'gantt',
   setViewMode: (mode) => set({ viewMode: mode }),
   selectedProjectId: null,
   setSelectedProjectId: (id) => set({ selectedProjectId: id }),

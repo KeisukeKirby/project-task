@@ -22,10 +22,10 @@ import { CsvImportButton } from '@/components/ui/CsvImportButton';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
 
 const NAV_ITEMS: { key: ViewMode; icon: React.ElementType; labelKey: string }[] = [
+  { key: 'gantt', icon: BarChart3, labelKey: 'nav.gantt' },
   { key: 'overview', icon: LayoutDashboard, labelKey: 'nav.overview' },
   { key: 'my-tasks', icon: ListTodo, labelKey: 'nav.myTasks' },
   { key: 'kanban', icon: Columns3, labelKey: 'nav.kanban' },
-  { key: 'gantt', icon: BarChart3, labelKey: 'nav.gantt' },
   { key: 'calendar', icon: Calendar, labelKey: 'nav.calendar' },
 ];
 
