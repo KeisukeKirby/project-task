@@ -32,15 +32,27 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     status: task?.status || 'todo',
     priority: task?.priority || 'medium',
     project_id: task?.project_id || projects[0]?.id || '',
-    assignees: (Array.isArray(task?.assignees) ? task.assignees : (typeof task?.assignees === 'string' ? JSON.parse(task.assignees) : (currentUser ? [currentUser.id] : []))) as string[],
+    assignees: (() => {
+      try {
+        return (Array.isArray(task?.assignees) ? task.assignees : (typeof task?.assignees === 'string' ? JSON.parse(task.assignees) : (currentUser ? [currentUser.id] : []))) as string[];
+      } catch (e) {
+        console.error('Failed to parse assignees', e);
+        return currentUser ? [currentUser.id] : [];
+      }
+    })(),
     planned_start_date: task?.planned_start_date || new Date().toISOString().split('T')[0],
     planned_end_date: task?.planned_end_date || new Date().toISOString().split('T')[0],
     estimated_lead_days: task?.estimated_lead_days || 1,
   });
 
-  const [formChecklist, setFormChecklist] = useState<ChecklistItem[]>(
-    Array.isArray(task?.checklist) ? task.checklist : (typeof task?.checklist === 'string' ? JSON.parse(task.checklist) : [])
-  );
+  const [formChecklist, setFormChecklist] = useState<ChecklistItem[]>(() => {
+    try {
+      return Array.isArray(task?.checklist) ? task.checklist : (typeof task?.checklist === 'string' ? JSON.parse(task.checklist) : []);
+    } catch (e) {
+      console.error('Failed to parse checklist', e);
+      return [];
+    }
+  });
   
   const [newCheckItem, setNewCheckItem] = useState('');
   const [editingCheckItemId, setEditingCheckItemId] = useState<string | null>(null);
@@ -55,14 +67,25 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   // Update form fields if language changes while viewing an existing task
   useEffect(() => {
     if (task && !isNew) {
-      setForm(prev => ({
-        ...prev,
-        name: getMultiLangText(task.name, lang),
-        description: getMultiLangText(task.description, lang),
-      }));
-      setFormChecklist(task.checklist || []);
+      setForm(prev => {
+        const newName = getMultiLangText(task.name as any, lang);
+        const newDesc = getMultiLangText(task.description as any, lang);
+        if (prev.name === newName && prev.description === newDesc) {
+          return prev;
+        }
+        return { ...prev, name: newName, description: newDesc };
+      });
+      setFormChecklist(prev => {
+        const newChecklist = Array.isArray(task.checklist) ? task.checklist : (typeof task.checklist === 'string' ? JSON.parse(task.checklist) : []);
+        // Prevent infinite loops by checking if references/values changed
+        if (JSON.stringify(prev) === JSON.stringify(newChecklist)) {
+          return prev;
+        }
+        return newChecklist;
+      });
     }
-  }, [lang, task, isNew]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   // Auto-calculate estimated_lead_days when dates change
   useEffect(() => {
