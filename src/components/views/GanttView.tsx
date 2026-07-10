@@ -5,6 +5,7 @@ import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUIStore, useUserStore, useEventStore } from '@/stores';
 import { STATUS_CONFIG, Project, Task, ChecklistItem } from '@/types';
 import { ZoomIn, ZoomOut, Maximize2, CheckSquare, Settings } from 'lucide-react';
+import { isHoliday } from '@/lib/utils';
 
 type GanttRow = 
   | { type: 'project'; project: Project; id: string }
@@ -279,14 +280,15 @@ export function GanttView() {
               {dayDates.map((d, i) => {
                 const date = new Date(d);
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isDayOff = isWeekend || isHoliday(d);
                 const isToday = d === today;
                 return (
                   <div
                     key={d}
-                    className={`flex items-center justify-center text-[10px] border-r border-surface-50 flex-shrink-0 cursor-pointer hover:bg-surface-100 transition-colors ${
+                    className={`flex items-center justify-center text-[10px] border-r border-surface-50 flex-shrink-0 cursor-pointer transition-colors ${
                       isToday ? 'bg-primary-50 text-primary-700 font-bold' :
-                      isWeekend ? 'bg-surface-50 text-surface-400' :
-                      'text-surface-500'
+                      isDayOff ? 'bg-[#9f9f9f] text-white hover:bg-[#8f8f8f]' :
+                      'text-surface-500 hover:bg-surface-100'
                     }`}
                     style={{ width: dayWidth, minWidth: dayWidth }}
                     onClick={() => openEventModal(d)}
@@ -304,12 +306,13 @@ export function GanttView() {
                 {dayDates.map((d) => {
                   const date = new Date(d);
                   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                  const isDayOff = isWeekend || isHoliday(d);
                   const isToday = d === today;
                   return (
                     <div
                       key={d}
                       className={`flex-shrink-0 border-r border-surface-50 ${
-                        isToday ? 'bg-primary-50/30' : isWeekend ? 'bg-surface-50/50' : ''
+                        isToday ? 'bg-primary-50/30' : isDayOff ? 'bg-[#9f9f9f]' : ''
                       }`}
                       style={{ width: dayWidth, height: ganttRows.length * ROW_HEIGHT }}
                     />
