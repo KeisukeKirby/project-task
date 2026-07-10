@@ -559,8 +559,8 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                      newDisplay = typeof activity.new_value === 'object' ? getMultiLangText(activity.new_value, lang) : activity.new_value;
                   }
                   if (activity.field_name === 'assignees') {
-                     oldDisplay = Array.isArray(activity.old_value) ? activity.old_value.map(id => users.find(u=>u.id===id)?.name || id).join(', ') : '';
-                     newDisplay = Array.isArray(activity.new_value) ? activity.new_value.map(id => users.find(u=>u.id===id)?.name || id).join(', ') : '';
+                     oldDisplay = Array.isArray(activity.old_value) ? activity.old_value.map((id: string) => users.find(u=>u.id===id)?.name || id).join(', ') : '';
+                     newDisplay = Array.isArray(activity.new_value) ? activity.new_value.map((id: string) => users.find(u=>u.id===id)?.name || id).join(', ') : '';
                   }
 
                   return (
