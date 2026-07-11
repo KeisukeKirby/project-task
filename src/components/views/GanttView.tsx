@@ -195,7 +195,7 @@ export function GanttView() {
                 return (
                   <div
                     key={row.id}
-                    className="flex items-center gap-2 px-4 border-b border-surface-200 bg-surface-50/80"
+                    className="flex items-center gap-2 px-4 bg-surface-50/80"
                     style={{ height: ROW_HEIGHT }}
                   >
                     <span className="text-sm font-bold text-surface-900 truncate flex-1 flex items-center gap-2">
@@ -216,7 +216,7 @@ export function GanttView() {
                 return (
                   <div
                     key={row.id}
-                    className="flex items-center gap-2 pl-8 pr-4 border-b border-surface-100 hover:bg-surface-50 cursor-pointer transition-colors"
+                    className="flex items-center gap-2 pl-8 pr-4 hover:bg-surface-50 cursor-pointer transition-colors"
                     style={{ height: ROW_HEIGHT }}
                     onClick={() => openTaskModal(row.task.id)}
                   >
@@ -238,7 +238,7 @@ export function GanttView() {
               return (
                 <div
                   key={row.id}
-                  className="flex items-center gap-2 pl-4 pr-4 border-b border-surface-100 hover:bg-surface-50 cursor-pointer transition-colors"
+                  className="flex items-center gap-2 pl-4 pr-4 hover:bg-surface-50 cursor-pointer transition-colors"
                   style={{ height: ROW_HEIGHT }}
                   onClick={() => openTaskModal(row.task.id)}
                 >
@@ -279,15 +279,16 @@ export function GanttView() {
             <div className="h-[30px] flex border-b border-surface-200 sticky top-[30px] bg-white z-20">
               {dayDates.map((d, i) => {
                 const date = new Date(d);
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                const isDayOff = isWeekend || isHoliday(d);
+                const isSaturday = date.getDay() === 6;
+                const isSundayOrHoliday = date.getDay() === 0 || isHoliday(d);
                 const isToday = d === today;
                 return (
                   <div
                     key={d}
                     className={`flex items-center justify-center text-[10px] border-r border-surface-50 flex-shrink-0 cursor-pointer transition-colors ${
                       isToday ? 'bg-primary-50 text-primary-700 font-bold' :
-                      isDayOff ? 'bg-[#9f9f9f] text-white hover:bg-[#8f8f8f]' :
+                      isSundayOrHoliday ? 'bg-red-50 text-red-600 hover:bg-red-100' :
+                      isSaturday ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' :
                       'text-surface-500 hover:bg-surface-100'
                     }`}
                     style={{ width: dayWidth, minWidth: dayWidth }}
@@ -305,14 +306,16 @@ export function GanttView() {
               <div className="absolute inset-0 flex pointer-events-none">
                 {dayDates.map((d) => {
                   const date = new Date(d);
-                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                  const isDayOff = isWeekend || isHoliday(d);
+                  const isSaturday = date.getDay() === 6;
+                  const isSundayOrHoliday = date.getDay() === 0 || isHoliday(d);
                   const isToday = d === today;
                   return (
                     <div
                       key={d}
                       className={`flex-shrink-0 border-r border-surface-50 ${
-                        isToday ? 'bg-primary-50/30' : isDayOff ? 'bg-[#9f9f9f]' : ''
+                        isToday ? 'bg-primary-50/30' : 
+                        isSundayOrHoliday ? 'bg-red-50/50' : 
+                        isSaturday ? 'bg-blue-50/50' : ''
                       }`}
                       style={{ width: dayWidth, height: ganttRows.length * ROW_HEIGHT }}
                     />
@@ -380,7 +383,7 @@ export function GanttView() {
                   return (
                     <div
                       key={row.id}
-                      className="absolute w-full bg-surface-50/50 border-b border-surface-200 pointer-events-none"
+                      className="absolute w-full bg-surface-50/50 pointer-events-none"
                       style={{ top: idx * ROW_HEIGHT, left: 0, height: ROW_HEIGHT }}
                     />
                   );
@@ -392,7 +395,7 @@ export function GanttView() {
                     return (
                       <div
                         key={row.id}
-                        className="absolute w-full border-b border-surface-50 pointer-events-none"
+                        className="absolute w-full pointer-events-none"
                         style={{ top: idx * ROW_HEIGHT, left: 0, height: ROW_HEIGHT }}
                       />
                     );
@@ -402,7 +405,7 @@ export function GanttView() {
                   return (
                     <div
                       key={row.id}
-                      className="absolute flex items-center justify-center border-b border-surface-50"
+                      className="absolute flex items-center justify-center"
                       style={{ top: idx * ROW_HEIGHT, left: 0, width: '100%', height: ROW_HEIGHT }}
                     >
                       <div
@@ -425,7 +428,7 @@ export function GanttView() {
                 return (
                   <div
                     key={row.id}
-                    className="absolute flex items-center border-b border-surface-50"
+                    className="absolute flex items-center"
                     style={{ top: idx * ROW_HEIGHT, left: 0, width: '100%', height: ROW_HEIGHT }}
                   >
                     {barStyle.width > 0 && (
