@@ -21,6 +21,7 @@ import { TaskModal } from '@/components/modals/TaskModal';
 import { ProjectModal } from '@/components/modals/ProjectModal';
 import { EventModal } from '@/components/modals/EventModal';
 import { CsvImportButton } from '@/components/ui/CsvImportButton';
+import { CsvExportButton } from '@/components/ui/CsvExportButton';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
 
 const NAV_ITEMS: { key: ViewMode; icon: React.ElementType; labelKey: string }[] = [
@@ -374,6 +375,7 @@ export function DashboardShell() {
 
           {/* New Task Button */}
           <div className="hidden sm:flex items-center gap-2">
+            <CsvExportButton />
             <CsvImportButton />
             <button
               onClick={() => openTaskModal()}
