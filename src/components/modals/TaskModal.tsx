@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
 import { getAvatarColor } from '@/lib/utils';
@@ -13,7 +13,12 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const { lang, t, formatDate } = useI18n();
   const { taskModalId } = useUIStore();
   const task = useTaskStore((s) => taskModalId ? s.getTask(taskModalId) : undefined);
-  const activities = useTaskStore((s) => taskModalId ? s.getTaskActivities(taskModalId) : []);
+  const allActivities = useTaskStore((s) => s.taskActivities);
+  const activities = useMemo(() => {
+    return taskModalId 
+      ? allActivities.filter(a => a.task_id === taskModalId).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      : [];
+  }, [allActivities, taskModalId]);
   const updateTask = useTaskStore((s) => s.updateTask);
   const addTask = useTaskStore((s) => s.addTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
