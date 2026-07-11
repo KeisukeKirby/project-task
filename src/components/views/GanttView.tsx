@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUIStore, useUserStore, useEventStore } from '@/stores';
 import { STATUS_CONFIG, Project, Task, ChecklistItem } from '@/types';
@@ -14,6 +14,7 @@ type GanttRow =
 
 export function GanttView() {
   const { lang, t, formatDate } = useI18n();
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const tasks = useTaskStore((s) => s.tasks);
   const projects = useProjectStore((s) => s.projects);
   const { openTaskModal, openProjectModal } = useUIStore();
@@ -354,16 +355,33 @@ export function GanttView() {
                     }}
                   >
                     <div 
-                      className="absolute top-2 left-1/2 -translate-x-1/2 text-[11px] font-bold text-white tracking-widest drop-shadow-md"
+                      className="absolute top-2 left-1/2 -translate-x-1/2 text-[11px] font-bold text-white tracking-widest drop-shadow-md pointer-events-auto cursor-pointer hover:opacity-80 transition-opacity"
                       style={{ 
                         writingMode: 'vertical-rl', 
                         textOrientation: 'mixed',
                         maxHeight: 'calc(100% - 16px)',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        padding: '8px 0' // give some click area
                       }}
+                      onClick={() => setActiveEventId(activeEventId === event.id ? null : event.id)}
                     >
                       {event.title}
                     </div>
+                    
+                    {activeEventId === event.id && (
+                      <div className="absolute top-10 left-full ml-2 bg-white text-surface-800 px-3 py-2 rounded-lg shadow-xl border border-surface-200 z-50 whitespace-nowrap text-sm flex flex-col gap-1 pointer-events-auto">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-bold" style={{ color: event.color }}>{event.title}</span>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setActiveEventId(null); }}
+                            className="text-surface-400 hover:text-surface-600"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <span className="text-xs text-surface-500 font-normal">{event.date}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
