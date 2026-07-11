@@ -314,8 +314,8 @@ export function GanttView() {
                       key={d}
                       className={`flex-shrink-0 border-r border-surface-50 ${
                         isToday ? 'bg-primary-50/30' : 
-                        isSundayOrHoliday ? 'bg-red-50/50' : 
-                        isSaturday ? 'bg-blue-50/50' : ''
+                        isSundayOrHoliday ? 'bg-red-50' : 
+                        isSaturday ? 'bg-blue-50' : ''
                       }`}
                       style={{ width: dayWidth, height: ganttRows.length * ROW_HEIGHT }}
                     />
