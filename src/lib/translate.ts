@@ -4,9 +4,9 @@ export async function translateText(text: string, currentLang: Language): Promis
   if (!text.trim()) return null;
 
   try {
-    const targetLangs: Language[] = ['ja', 'en', 'th'];
-    // We can also translate to the currentLang just to be safe, or just use the original text for it.
-    // For simplicity, let's translate to all 3 languages.
+    // Do not translate the text into the current language, so that whatever the user types 
+    // (even if it's English in Japanese mode) is preserved exactly as is for their current language setting.
+    const targetLangs: Language[] = ['ja', 'en', 'th'].filter(l => l !== currentLang) as Language[];
     
     const response = await fetch('/api/translate', {
       method: 'POST',
@@ -27,9 +27,9 @@ export async function translateText(text: string, currentLang: Language): Promis
     
     if (data.translations) {
       return {
-        ja: data.translations.ja || text,
-        en: data.translations.en || text,
-        th: data.translations.th || text,
+        ja: currentLang === 'ja' ? text : (data.translations.ja || text),
+        en: currentLang === 'en' ? text : (data.translations.en || text),
+        th: currentLang === 'th' ? text : (data.translations.th || text),
       };
     }
     
