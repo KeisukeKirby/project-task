@@ -23,6 +23,7 @@ import { EventModal } from '@/components/modals/EventModal';
 import { CsvImportButton } from '@/components/ui/CsvImportButton';
 import { CsvExportButton } from '@/components/ui/CsvExportButton';
 import { UserSelectModal } from '@/components/modals/UserSelectModal';
+import { AccountsDashboard } from '@/components/views/AccountsDashboard';
 
 const NAV_ITEMS: { key: ViewMode; icon: React.ElementType; labelKey: string }[] = [
   { key: 'gantt', icon: BarChart3, labelKey: 'nav.gantt' },
@@ -163,6 +164,7 @@ export function DashboardShell() {
       case 'kanban': return <KanbanView />;
       case 'gantt': return <GanttView />;
       case 'calendar': return <CalendarView />;
+      case 'accounts': return <AccountsDashboard />;
       default: return <OverviewDashboard />;
     }
   };
@@ -256,6 +258,29 @@ export function DashboardShell() {
               </>
             )}
           </button>
+
+          {/* Admin Tools */}
+          {(currentUser?.role === 'admin' || currentUser?.email === 'hoshino@example.com' || currentUser?.email === 'shimada@example.com' || currentUser?.email === 'mktbarefootincth@gmail.com') && (
+            <>
+              <div className={`mt-6 text-[10px] font-semibold text-surface-400 uppercase tracking-wider px-3 mb-2 ${sidebarCollapsed ? 'hidden' : ''}`}>
+                管理者メニュー
+              </div>
+              <button
+                onClick={() => { setViewMode('accounts'); setMobileSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+                  viewMode === 'accounts' 
+                    ? 'bg-primary-50 text-primary-700 font-medium shadow-sm'
+                    : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
+                } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                data-tooltip={sidebarCollapsed ? 'アカウント管理' : undefined}
+              >
+                <Settings className={`w-[18px] h-[18px] flex-shrink-0 ${viewMode === 'accounts' ? 'text-primary-600' : ''}`} />
+                {!sidebarCollapsed && (
+                  <span className="text-sm">アカウント管理</span>
+                )}
+              </button>
+            </>
+          )}
 
           {/* Projects List */}
           <div className={`mt-6 text-[10px] font-semibold text-surface-400 uppercase tracking-wider px-3 mb-2 ${sidebarCollapsed ? 'hidden' : ''}`}>

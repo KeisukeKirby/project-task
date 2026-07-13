@@ -8,8 +8,10 @@ import { useUserStore } from '@/stores';
 
 export function UserSelectModal() {
   const { lang, t, setLang } = useI18n();
+  const users = useUserStore((s) => s.users);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,8 +24,14 @@ export function UserSelectModal() {
 
     try {
       if (isLogin) {
+        let loginEmail = email;
+        if (selectedUserId) {
+          const u = users.find(u => u.id === selectedUserId);
+          if (u) loginEmail = u.email;
+        }
+        
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: loginEmail,
           password,
         });
         if (signInError) throw signInError;
@@ -106,20 +114,39 @@ export function UserSelectModal() {
               </div>
             )}
             
-            <div>
-              <label className="block text-white/70 text-xs font-medium mb-1.5 uppercase tracking-wider">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
-                  placeholder="name@company.com"
-                />
+            {isLogin && users.length > 0 ? (
+              <div>
+                <label className="block text-white/70 text-xs font-medium mb-1.5 uppercase tracking-wider">User</label>
+                <div className="relative">
+                  <select
+                    required
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-3 pr-4 py-2.5 text-white focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all appearance-none"
+                  >
+                    <option value="" disabled className="text-surface-900">Select your name</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id} className="text-surface-900">{u.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label className="block text-white/70 text-xs font-medium mb-1.5 uppercase tracking-wider">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
+                    placeholder="name@company.com"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-white/70 text-xs font-medium mb-1.5 uppercase tracking-wider">Password</label>

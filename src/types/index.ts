@@ -240,7 +240,7 @@ export interface ViewFilters {
   dateRange: { start: string | null; end: string | null };
 }
 
-export type ViewMode = 'overview' | 'my-tasks' | 'kanban' | 'gantt' | 'calendar' | 'reports';
+export type ViewMode = 'overview' | 'my-tasks' | 'kanban' | 'gantt' | 'calendar' | 'reports' | 'accounts';
 
 // ── Status / Priority Config ──
 
