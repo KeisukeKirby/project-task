@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useUIStore, useEventStore, useProjectStore } from '@/stores';
-import { X, Calendar as CalendarIcon, Type, Folder, Palette } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Type, Folder, Palette, Trash2 } from 'lucide-react';
 
 const COLORS = [
   '#f43f5e', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', 
@@ -14,34 +14,64 @@ const COLORS = [
 
 export function EventModal() {
   const { lang, t } = useI18n();
-  const { eventModalDate, closeEventModal, selectedProjectId } = useUIStore();
-  const { addEvent } = useEventStore();
+  const { eventModalDate, eventModalEventId, closeEventModal, selectedProjectId } = useUIStore();
+  const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
   const projects = useProjectStore((s) => s.projects);
 
-  const [title, setTitle] = useState('');
-  const [projectId, setProjectId] = useState<string>(selectedProjectId || '');
-  const [color, setColor] = useState<string>(COLORS[0]);
+  const editingEvent = eventModalEventId ? events.find(e => e.id === eventModalEventId) : null;
+
+  const [title, setTitle] = useState(editingEvent ? editingEvent.title : '');
+  const [projectId, setProjectId] = useState<string>(editingEvent ? (editingEvent.project_id || '') : (selectedProjectId || ''));
+  const [color, setColor] = useState<string>(editingEvent ? editingEvent.color : COLORS[0]);
+
+  // Reset state when modal opens for a new date/event
+  React.useEffect(() => {
+    if (editingEvent) {
+      setTitle(editingEvent.title);
+      setProjectId(editingEvent.project_id || '');
+      setColor(editingEvent.color);
+    } else {
+      setTitle('');
+      setProjectId(selectedProjectId || '');
+      setColor(COLORS[0]);
+    }
+  }, [eventModalDate, eventModalEventId, editingEvent, selectedProjectId]);
 
   if (!eventModalDate) return null;
 
   const handleSave = () => {
     if (!title.trim()) return;
 
-    addEvent({
-      title: title.trim(),
-      date: eventModalDate,
-      project_id: projectId || null,
-      color,
-    });
+    if (editingEvent) {
+      updateEvent(editingEvent.id, {
+        title: title.trim(),
+        project_id: projectId || null,
+        color,
+      });
+    } else {
+      addEvent({
+        title: title.trim(),
+        date: eventModalDate,
+        project_id: projectId || null,
+        color,
+      });
+    }
     
     closeEventModal();
+  };
+
+  const handleDelete = () => {
+    if (editingEvent && window.confirm(t('common.confirmDelete') || 'Are you sure you want to delete this event?')) {
+      deleteEvent(editingEvent.id);
+      closeEventModal();
+    }
   };
 
   return (
     <div className="modal-overlay">
       <div className="modal-content w-full max-w-md mx-4">
         <div className="flex items-center justify-between p-4 border-b border-surface-200">
-          <h2 className="text-lg font-bold text-surface-900">New Event</h2>
+          <h2 className="text-lg font-bold text-surface-900">{editingEvent ? 'Edit Event' : 'New Event'}</h2>
           <button onClick={closeEventModal} className="p-1.5 rounded-lg hover:bg-surface-100 text-surface-400">
             <X className="w-5 h-5" />
           </button>
@@ -104,17 +134,25 @@ export function EventModal() {
           </div>
         </div>
 
-        <div className="flex justify-end p-4 border-t border-surface-200 bg-surface-50 gap-2 rounded-b-2xl">
-          <button onClick={closeEventModal} className="px-4 py-2 text-sm font-semibold text-surface-600 hover:bg-surface-200 rounded-lg transition-colors">
-            {t('common.cancel')}
-          </button>
-          <button 
-            onClick={handleSave} 
-            disabled={!title.trim()}
-            className="px-4 py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm shadow-primary-500/20 transition-all"
-          >
-            {t('common.save')}
-          </button>
+        <div className="flex justify-between items-center p-4 border-t border-surface-200 bg-surface-50 rounded-b-2xl">
+          {editingEvent ? (
+            <button onClick={handleDelete} className="px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-100 rounded-lg transition-colors flex items-center gap-2">
+              <Trash2 className="w-4 h-4" />
+              {t('common.delete') || 'Delete'}
+            </button>
+          ) : <div />}
+          <div className="flex gap-2">
+            <button onClick={closeEventModal} className="px-4 py-2 text-sm font-semibold text-surface-600 hover:bg-surface-200 rounded-lg transition-colors">
+              {t('common.cancel')}
+            </button>
+            <button 
+              onClick={handleSave} 
+              disabled={!title.trim()}
+              className="px-4 py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm shadow-primary-500/20 transition-all"
+            >
+              {t('common.save')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

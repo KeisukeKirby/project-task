@@ -410,12 +410,21 @@ export function GanttView() {
                       <div className="absolute top-10 left-full ml-2 bg-white text-surface-800 px-3 py-2 rounded-lg shadow-xl border border-surface-200 z-50 whitespace-nowrap text-sm flex flex-col gap-1 pointer-events-auto">
                         <div className="flex items-center justify-between gap-4">
                           <span className="font-bold" style={{ color: event.color }}>{event.title}</span>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setActiveEventId(null); }}
-                            className="text-surface-400 hover:text-surface-600"
-                          >
-                            ✕
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openEventModal(event.date, event.id); setActiveEventId(null); }}
+                              className="text-surface-400 hover:text-primary-600 transition-colors p-1"
+                              title={t('common.edit') || 'Edit'}
+                            >
+                              <Settings className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setActiveEventId(null); }}
+                              className="text-surface-400 hover:text-surface-600 p-1"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
                         <span className="text-xs text-surface-500 font-normal">{event.date}</span>
                       </div>

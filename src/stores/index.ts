@@ -336,7 +336,8 @@ interface UIStore {
   closeProjectModal: () => void;
   eventModalOpen: boolean;
   eventModalDate: string | null;
-  openEventModal: (date: string) => void;
+  eventModalEventId: string | null;
+  openEventModal: (date: string, eventId?: string) => void;
   closeEventModal: () => void;
 }
 
@@ -369,8 +370,9 @@ export const useUIStore = create<UIStore>()((set) => ({
   closeProjectModal: () => set({ projectModalOpen: false, projectModalId: null }),
   eventModalOpen: false,
   eventModalDate: null,
-  openEventModal: (date: string) => set({ eventModalOpen: true, eventModalDate: date }),
-  closeEventModal: () => set({ eventModalOpen: false, eventModalDate: null }),
+  eventModalEventId: null,
+  openEventModal: (date: string, eventId?: string) => set({ eventModalOpen: true, eventModalDate: date, eventModalEventId: eventId || null }),
+  closeEventModal: () => set({ eventModalOpen: false, eventModalDate: null, eventModalEventId: null }),
 }));
 
 // ── Event Store ──
