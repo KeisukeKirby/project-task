@@ -24,6 +24,38 @@ export function GanttView() {
   const today = new Date().toISOString().split('T')[0];
   const events = useEventStore((s) => s.events);
   const openEventModal = useUIStore((s) => s.openEventModal);
+  const reorderProjects = useProjectStore((s) => s.reorderProjects);
+  const [draggedProjectIdx, setDraggedProjectIdx] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, globalIndex: number) => {
+    setDraggedProjectIdx(globalIndex);
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => {
+      const el = e.target as HTMLElement;
+      el.style.opacity = '0.5';
+    }, 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetGlobalIndex: number) => {
+    e.preventDefault();
+    if (draggedProjectIdx !== null && draggedProjectIdx !== targetGlobalIndex) {
+      reorderProjects(draggedProjectIdx, targetGlobalIndex);
+    }
+    setDraggedProjectIdx(null);
+    const el = document.querySelectorAll('.gantt-draggable-project');
+    el.forEach((node) => ((node as HTMLElement).style.opacity = '1'));
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedProjectIdx(null);
+    const el = e.target as HTMLElement;
+    el.style.opacity = '1';
+  };
 
   const filteredTasks = localSelectedProjectId
     ? tasks.filter(t => t.project_id === localSelectedProjectId).sort((a, b) => a.sort_order - b.sort_order)
@@ -193,17 +225,23 @@ export function GanttView() {
             {/* Rows */}
             {ganttRows.map((row) => {
               if (row.type === 'project') {
+                const globalIndex = projects.findIndex(p => p.id === row.project.id);
                 return (
                   <div
                     key={row.id}
-                    className="flex items-center gap-2 px-4 bg-surface-50/80"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, globalIndex)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, globalIndex)}
+                    onDragEnd={handleDragEnd}
+                    className="gantt-draggable-project flex items-center gap-2 px-4 bg-surface-50/80 cursor-move hover:bg-surface-100 transition-colors"
                     style={{ height: ROW_HEIGHT }}
                   >
-                    <span className="text-sm font-bold text-surface-900 truncate flex-1 flex items-center gap-2">
+                    <span className="text-sm font-bold text-surface-900 truncate flex-1 flex items-center gap-2 pointer-events-none">
                       {getMultiLangText(row.project.name, lang)}
                       <button
-                        onClick={() => openProjectModal(row.project.id)}
-                        className="p-1 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                        onClick={(e) => { e.stopPropagation(); openProjectModal(row.project.id); }}
+                        className="p-1 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors pointer-events-auto"
                         title={t('project.edit')}
                       >
                         <Settings className="w-3.5 h-3.5" />
