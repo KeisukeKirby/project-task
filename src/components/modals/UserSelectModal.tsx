@@ -17,6 +17,16 @@ export function UserSelectModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (users.length === 0) {
+      supabase.from('users').select('*').then(({ data, error }) => {
+        if (data && !error && data.length > 0) {
+          useUserStore.setState({ users: data });
+        }
+      });
+    }
+  }, [users.length]);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

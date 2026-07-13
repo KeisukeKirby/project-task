@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useUIStore, useUserStore, useProjectStore, useTaskStore } from '@/stores';
 import type { Language, ViewMode, User } from '@/types';
-import { getAvatarColor } from '@/lib/utils';
+import { getAvatarColor, isAdminUser } from '@/lib/utils';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { supabase } from '@/lib/supabase';
 import {
@@ -260,7 +260,7 @@ export function DashboardShell() {
           </button>
 
           {/* Admin Tools */}
-          {(currentUser?.role === 'admin' || currentUser?.email === 'hoshino@example.com' || currentUser?.email === 'shimada@example.com' || currentUser?.email === 'mktbarefootincth@gmail.com') && (
+          {isAdminUser(currentUser) && (
             <>
               <div className={`mt-6 text-[10px] font-semibold text-surface-400 uppercase tracking-wider px-3 mb-2 ${sidebarCollapsed ? 'hidden' : ''}`}>
                 管理者メニュー

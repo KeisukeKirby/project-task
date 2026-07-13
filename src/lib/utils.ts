@@ -24,3 +24,16 @@ export const THAI_HOLIDAYS = new Set([
 export function isHoliday(dateStr: string): boolean {
   return THAI_HOLIDAYS.has(dateStr);
 }
+
+export function isAdminUser(user: any): boolean {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  
+  const email = (user.email || '').toLowerCase();
+  const name = (user.name || '').toLowerCase();
+  
+  if (email === 'hoshino@example.com' || email === 'shimada@example.com' || email === 'mktbarefootincth@gmail.com') return true;
+  if (name.includes('shimada') || name.includes('hoshino') || name.includes('星野') || name.includes('島田') || name.includes('嶋田')) return true;
+  
+  return false;
+}

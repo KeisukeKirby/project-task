@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useProjectStore, useTaskStore, useUserStore, useUIStore, useEventStore } from '@/stores';
-import { getAvatarColor } from '@/lib/utils';
+import { getAvatarColor, isAdminUser } from '@/lib/utils';
 import { BarChart3, TrendingUp, AlertTriangle, CheckCircle2, Clock, FolderOpen, ArrowRight, Zap, GripVertical, Calendar as CalendarIcon, History } from 'lucide-react';
 import { TaskActivityTimeline } from './TaskActivityTimeline';
 
@@ -216,7 +216,7 @@ export function OverviewDashboard() {
       </div>
 
       {/* Task Activity History (Admins Only) */}
-      {(currentUser?.role === 'admin' || currentUser?.email === 'hoshino@example.com' || currentUser?.email === 'shimada@example.com' || currentUser?.email === 'mktbarefootincth@gmail.com') && (
+      {isAdminUser(currentUser) && (
         <div className="mt-8">
            <TaskActivityTimeline />
         </div>
