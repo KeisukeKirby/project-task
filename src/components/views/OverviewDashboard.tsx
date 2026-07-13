@@ -94,49 +94,65 @@ export function OverviewDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* 遅延しているプロジェクト */}
+        {/* 遅延しているタスク */}
         <div className="card border-l-4 border-l-rose-500 overflow-hidden shadow-lg">
           <div className="bg-rose-50 p-4 border-b border-rose-100 flex items-center justify-between">
             <h3 className="font-bold text-rose-700 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
-              🚨 遅延しているプロジェクト
+              🚨 遅延しているタスク
             </h3>
             <span className="bg-rose-100 text-rose-700 text-xs font-bold px-2 py-1 rounded-full">
-              {delayedProjects.length}件
+              {overdueTasks.length}件
             </span>
           </div>
           
           <div className="p-4">
-            {delayedProjects.length > 0 ? (
+            {overdueTasks.length > 0 ? (
               <div className="space-y-3">
-                {projects.map((project, index) => {
-                  if (!delayedProjects.includes(project)) return null;
-                  const projOverdue = overdueTasks.filter(t => t.project_id === project.id).length;
+                {overdueTasks.map((task) => {
+                  const targetProject = projects.find(p => p.id === task.project_id);
+                  const assignees = users.filter(u => task.assignees.includes(u.id));
+                  const delayDays = Math.floor((new Date().getTime() - new Date(task.planned_end_date!).getTime()) / (1000 * 3600 * 24));
+                  
                   return (
                     <div 
-                      key={project.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDrop={(e) => handleDrop(e, index)}
-                      onDragEnd={handleDragEnd}
-                      className="draggable-project flex items-center gap-3 p-3 rounded-xl border border-surface-200 hover:border-rose-300 bg-white transition-all cursor-move group"
+                      key={task.id}
+                      className="flex items-start gap-3 p-3 rounded-xl border border-surface-200 hover:border-rose-300 bg-white transition-all group cursor-pointer"
+                      onClick={() => openTaskModal(task.id)}
                     >
-                      <div className="cursor-grab active:cursor-grabbing text-surface-300 group-hover:text-surface-500 p-1">
-                        <GripVertical className="w-4 h-4" />
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 bg-rose-50 flex-shrink-0 mt-0.5">
+                        <AlertTriangle className="w-5 h-5" />
                       </div>
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: `${project.color}15` }}>
-                        {project.icon}
-                      </div>
-                      <div className="flex-1 min-w-0" onClick={() => { setSelectedProjectId(project.id); setViewMode('kanban'); }}>
-                        <h4 className="font-semibold text-surface-900 text-sm truncate group-hover:text-primary-600 cursor-pointer">
-                          {getMultiLangText(project.name, lang)}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-surface-900 text-sm group-hover:text-primary-600 truncate">
+                          {getMultiLangText(task.name, lang)}
                         </h4>
-                        <div className="text-xs text-rose-600 font-medium mt-0.5">
-                          {projOverdue}件のタスクが遅延中
+                        
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          {targetProject && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface-100 text-surface-600">
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: targetProject.color }} />
+                              {getMultiLangText(targetProject.name, lang)}
+                            </span>
+                          )}
+                          <span className="text-xs font-bold text-rose-600">
+                            {delayDays}日遅延
+                          </span>
                         </div>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-surface-300" />
+                      
+                      <div className="flex -space-x-1 flex-shrink-0">
+                        {assignees.map(user => (
+                          <div 
+                            key={user.id} 
+                            className="avatar avatar-sm ring-2 ring-white" 
+                            style={{ backgroundColor: getAvatarColor(user.id), width: '24px', height: '24px', fontSize: '10px' }}
+                            title={user.name}
+                          >
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   );
                 })}
@@ -144,7 +160,7 @@ export function OverviewDashboard() {
             ) : (
               <div className="text-center py-8">
                 <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm text-surface-500 font-medium">遅延しているプロジェクトはありません 🎉</p>
+                <p className="text-sm text-surface-500 font-medium">遅延しているタスクはありません 🎉</p>
               </div>
             )}
           </div>
