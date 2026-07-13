@@ -5,7 +5,7 @@ import { useUserStore } from '@/stores';
 import { useI18n } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 import { Shield, ShieldAlert, Key, UserPlus, CheckCircle2, User as UserIcon } from 'lucide-react';
-import { getAvatarColor } from '@/lib/utils';
+import { getAvatarColor, isAdminUser } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
 export function AccountsDashboard() {
@@ -22,7 +22,7 @@ export function AccountsDashboard() {
   const [error, setError] = useState('');
 
   // Check admin rights
-  if (currentUser?.role !== 'admin' && currentUser?.email !== 'hoshino@example.com' && currentUser?.email !== 'shimada@example.com' && currentUser?.email !== 'mktbarefootincth@gmail.com') {
+  if (!isAdminUser(currentUser)) {
     return (
       <div className="p-8 text-center">
         <ShieldAlert className="w-12 h-12 text-rose-500 mx-auto mb-4" />
