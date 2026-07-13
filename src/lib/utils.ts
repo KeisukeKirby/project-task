@@ -32,7 +32,7 @@ export function isAdminUser(user: any): boolean {
   const email = (user.email || '').toLowerCase();
   const name = (user.name || '').toLowerCase();
   
-  if (email === 'hoshino@example.com' || email === 'shimada@example.com' || email === 'mktbarefootincth@gmail.com') return true;
+  if (email === 'hoshino@example.com' || email === 'hoshino@barefootinc.co.th' || email === 'shimada@example.com' || email === 'mktbarefootincth@gmail.com') return true;
   if (name.includes('shimada') || name.includes('hoshino') || name.includes('星野') || name.includes('島田') || name.includes('嶋田')) return true;
   
   return false;
