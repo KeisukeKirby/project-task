@@ -79,6 +79,40 @@ export function AccountsDashboard() {
     }
   };
 
+  const handleUpdateRole = async (userId: string, newRole: UserRole) => {
+    if (!confirm('権限を変更してよろしいですか？')) return;
+    
+    try {
+      const { error: dbError } = await supabase.from('users').update({ role: newRole }).eq('id', userId);
+      if (dbError) throw dbError;
+      
+      useUserStore.setState(state => ({
+        users: state.users.map(u => u.id === userId ? { ...u, role: newRole } : u)
+      }));
+      alert('権限を変更しました。');
+    } catch (err: any) {
+      alert(err.message || '権限の変更に失敗しました。');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('本当に削除しますか？この操作は取り消せません。')) return;
+    
+    try {
+      // NOTE: This will only delete the user from public.users
+      // They may still exist in auth.users unless there's a trigger
+      const { error: dbError } = await supabase.from('users').delete().eq('id', userId);
+      if (dbError) throw dbError;
+      
+      useUserStore.setState(state => ({
+        users: state.users.filter(u => u.id !== userId)
+      }));
+      alert('ユーザーを削除しました。');
+    } catch (err: any) {
+      alert(err.message || '削除に失敗しました。');
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
@@ -143,6 +177,7 @@ export function AccountsDashboard() {
                 onChange={(e) => setRole(e.target.value as UserRole)}
                 className="w-full px-3 py-2 bg-surface-50 border border-surface-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
               >
+                <option value="owner">オーナー (Owner)</option>
                 <option value="admin">管理者 (Admin)</option>
                 <option value="member">一般メンバー (Member)</option>
                 <option value="viewer">閲覧者 (Viewer)</option>
@@ -201,11 +236,21 @@ export function AccountsDashboard() {
                       </span>
                     </td>
                     <td className="py-3">
-                      <button className="text-xs font-medium text-primary-600 hover:text-primary-700 hover:underline">
-                        権限変更
-                      </button>
+                      <select 
+                        value={user.role}
+                        onChange={(e) => handleUpdateRole(user.id, e.target.value as UserRole)}
+                        className="text-xs bg-surface-50 border border-surface-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 focus:outline-none"
+                      >
+                        <option value="owner">オーナー</option>
+                        <option value="admin">管理者</option>
+                        <option value="member">一般メンバー</option>
+                        <option value="viewer">閲覧者</option>
+                      </select>
                       <span className="text-surface-300 mx-2">|</span>
-                      <button className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:underline">
+                      <button 
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:underline"
+                      >
                         削除
                       </button>
                     </td>
