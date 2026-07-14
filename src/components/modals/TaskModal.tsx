@@ -75,6 +75,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const [formPostProcesses, setFormPostProcesses] = useState<PostProcess[]>(task?.post_processes || []);
   const [newPostProcessName, setNewPostProcessName] = useState('');
   const [newPostProcessDays, setNewPostProcessDays] = useState(1);
+  const [showHistory, setShowHistory] = useState(false);
   
   const [newCheckItem, setNewCheckItem] = useState('');
   const [editingCheckItemId, setEditingCheckItemId] = useState<string | null>(null);
@@ -696,10 +697,25 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
           {/* Activity History */}
           {!isNew && activities.length > 0 && (
             <div className="pt-4 border-t border-surface-200 mt-6">
-              <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-4 flex items-center gap-1">
-                <History className="w-3 h-3" /> {t('task.history') || 'Activity History'}
-              </label>
-              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-surface-200 before:to-transparent">
+              <div className="flex items-center justify-between mb-4">
+                <label 
+                  className="text-xs font-semibold text-surface-500 uppercase tracking-wider flex items-center gap-1 cursor-pointer hover:text-surface-700"
+                  onClick={() => setShowHistory(!showHistory)}
+                >
+                  <History className="w-3 h-3" /> {t('task.history') || 'Activity History'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="p-1 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded-md transition-colors"
+                  title={showHistory ? 'Hide history' : 'Show history'}
+                >
+                  <Plus className={`w-4 h-4 transition-transform ${showHistory ? 'rotate-45' : ''}`} />
+                </button>
+              </div>
+              
+              {showHistory && (
+                <div className="space-y-4 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-surface-200 before:to-transparent">
                 {activities.map((activity) => {
                   const user = users.find(u => u.id === activity.user_id);
                   let fieldLabel = activity.field_name;
@@ -752,6 +768,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                   );
                 })}
               </div>
+              )}
             </div>
           )}
         </div>
