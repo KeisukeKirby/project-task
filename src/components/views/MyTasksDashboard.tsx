@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useUserStore, useProjectStore, useUIStore } from '@/stores';
-import { getAvatarColor } from '@/lib/utils';
-import { Play, CheckCircle2, Clock, AlertTriangle, Calendar, ArrowUpRight, RotateCcw } from 'lucide-react';
+import { getAvatarColor, isAdminUser } from '@/lib/utils';
+import { Play, CheckCircle2, Clock, AlertTriangle, Calendar, ArrowUpRight, RotateCcw, User as UserIcon } from 'lucide-react';
 import { STATUS_CONFIG, PRIORITY_CONFIG } from '@/types';
 
 export function MyTasksDashboard() {
@@ -13,13 +13,22 @@ export function MyTasksDashboard() {
   const startTask = useTaskStore((s) => s.startTask);
   const completeTask = useTaskStore((s) => s.completeTask);
   const updateTask = useTaskStore((s) => s.updateTask);
+  const users = useUserStore((s) => s.users);
   const currentUser = useUserStore((s) => s.currentUser);
   const projects = useProjectStore((s) => s.projects);
   const { openTaskModal } = useUIStore();
 
+  const [targetUserId, setTargetUserId] = useState<string>(currentUser?.id || '');
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      setTargetUserId(currentUser.id);
+    }
+  }, [currentUser?.id]);
+
   if (!currentUser) return null;
 
-  const myTasks = tasks.filter(t => t.assignees.includes(currentUser.id)).sort((a, b) => a.sort_order - b.sort_order);
+  const myTasks = tasks.filter(t => t.assignees.includes(targetUserId)).sort((a, b) => a.sort_order - b.sort_order);
   const today = new Date().toISOString().split('T')[0];
 
   const todayTasks = myTasks.filter(t => t.planned_end_date === today && t.status !== 'done');
@@ -160,6 +169,25 @@ export function MyTasksDashboard() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
+      {/* Admin User Selector */}
+      {isAdminUser(currentUser) && (
+        <div className="flex items-center gap-3 bg-surface-50 p-3 rounded-xl border border-surface-200">
+          <UserIcon className="w-5 h-5 text-surface-400" />
+          <span className="text-sm font-medium text-surface-700">{lang === 'ja' ? '表示対象ユーザー:' : lang === 'th' ? 'ผู้ใช้เป้าหมาย:' : 'Target User:'}</span>
+          <select
+            value={targetUserId}
+            onChange={(e) => setTargetUserId(e.target.value)}
+            className="flex-1 max-w-[240px] px-3 py-1.5 bg-surface-0 border border-surface-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+          >
+            {users.map(u => (
+              <option key={u.id} value={u.id}>
+                {u.name} {u.id === currentUser.id ? (lang === 'ja' ? '(あなた)' : '(You)') : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* My Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="card p-4 text-center">
