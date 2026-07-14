@@ -12,15 +12,17 @@ export async function POST(req: Request) {
 
     const translations: Record<string, string> = {};
 
-    // Translate to all requested languages
-    // To optimize, we can use Promise.all
-    const promises = targetLangs.map(async (lang) => {
-      // Map 'ja', 'en', 'th' to google translate codes if necessary (they are identical)
-      const res = await translate(text, { to: lang }) as any;
-      translations[lang] = res.text;
-    });
-
-    await Promise.all(promises);
+    // Translate sequentially to avoid rate limiting on Vercel
+    for (const lang of targetLangs) {
+      try {
+        const res = await translate(text, { to: lang }) as any;
+        translations[lang] = res.text;
+      } catch (err) {
+        console.error(`Failed to translate to ${lang}:`, err);
+        // Fallback to original text if translation fails
+        translations[lang] = text;
+      }
+    }
 
     return NextResponse.json({ translations });
   } catch (error) {
