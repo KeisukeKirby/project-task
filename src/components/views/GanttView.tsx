@@ -541,16 +541,21 @@ export function GanttView() {
                         return (
                           <div
                             key={pp.id}
-                            className="absolute flex items-center justify-center rounded-sm border border-dashed border-surface-400 bg-surface-100/60 z-[9] overflow-hidden cursor-pointer hover:bg-surface-200 transition-colors"
+                            className="absolute flex items-center justify-center rounded-sm border border-slate-400 z-[9] overflow-hidden cursor-pointer hover:brightness-95 transition-all shadow-sm"
                             style={{
                               left: ppLeft + 2,
                               width: ppWidth,
                               height: ROW_HEIGHT - 16,
+                              backgroundImage: 'repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 8px, #e2e8f0 8px, #e2e8f0 16px)',
                             }}
                             onClick={() => openTaskModal(task.id)}
                             title={`後工程: ${pp.name} (${pp.days}日)`}
                           >
-                            {ppWidth > 30 && <span className="text-[9px] text-surface-600 truncate px-1">{pp.name}</span>}
+                            {ppWidth > 30 && (
+                              <span className="text-[10px] font-medium text-slate-700 truncate px-1 drop-shadow-sm bg-white/50 rounded px-1.5 py-0.5">
+                                {pp.name}
+                              </span>
+                            )}
                           </div>
                         );
                       });
