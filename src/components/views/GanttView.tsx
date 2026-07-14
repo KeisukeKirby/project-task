@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUIStore, useUserStore, useEventStore } from '@/stores';
-import { STATUS_CONFIG, Project, Task, ChecklistItem } from '@/types';
+import { STATUS_CONFIG, Project, Task, ChecklistItem, MultiLangText, Language } from '@/types';
 import { ZoomIn, ZoomOut, Maximize2, CheckSquare, Settings } from 'lucide-react';
 import { isHoliday, isAdminUser } from '@/lib/utils';
 
