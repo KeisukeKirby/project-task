@@ -317,6 +317,8 @@ export const useUserStore = create<UserStore>()((set, get) => ({
 // ── UI Store ──
 
 interface UIStore {
+  theme: 'light' | 'dark' | 'system';
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   selectedProjectId: string | null;
@@ -350,30 +352,44 @@ const defaultFilters: ViewFilters = {
   dateRange: { start: null, end: null },
 };
 
-export const useUIStore = create<UIStore>()((set) => ({
-  viewMode: 'gantt',
-  setViewMode: (mode) => set({ viewMode: mode }),
-  selectedProjectId: null,
-  setSelectedProjectId: (id) => set({ selectedProjectId: id }),
-  sidebarCollapsed: false,
-  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-  filters: { ...defaultFilters },
-  setFilter: (key, value) => set((state) => ({ filters: { ...state.filters, [key]: value } })),
-  resetFilters: () => set({ filters: { ...defaultFilters } }),
-  taskModalOpen: false,
-  taskModalId: null,
-  openTaskModal: (taskId) => set({ taskModalOpen: true, taskModalId: taskId || null }),
-  closeTaskModal: () => set({ taskModalOpen: false, taskModalId: null }),
-  projectModalOpen: false,
-  projectModalId: null,
-  openProjectModal: (id?: string) => set({ projectModalOpen: true, projectModalId: id || null }),
-  closeProjectModal: () => set({ projectModalOpen: false, projectModalId: null }),
-  eventModalOpen: false,
-  eventModalDate: null,
-  eventModalEventId: null,
-  openEventModal: (date: string, eventId?: string) => set({ eventModalOpen: true, eventModalDate: date, eventModalEventId: eventId || null }),
-  closeEventModal: () => set({ eventModalOpen: false, eventModalDate: null, eventModalEventId: null }),
-}));
+export const useUIStore = create<UIStore>()(
+  persist(
+    (set) => ({
+      theme: 'light',
+      setTheme: (theme) => set({ theme }),
+      viewMode: 'gantt',
+      setViewMode: (mode) => set({ viewMode: mode }),
+      selectedProjectId: null,
+      setSelectedProjectId: (id) => set({ selectedProjectId: id }),
+      sidebarCollapsed: false,
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      filters: { ...defaultFilters },
+      setFilter: (key, value) => set((state) => ({ filters: { ...state.filters, [key]: value } })),
+      resetFilters: () => set({ filters: { ...defaultFilters } }),
+      taskModalOpen: false,
+      taskModalId: null,
+      openTaskModal: (taskId) => set({ taskModalOpen: true, taskModalId: taskId || null }),
+      closeTaskModal: () => set({ taskModalOpen: false, taskModalId: null }),
+      projectModalOpen: false,
+      projectModalId: null,
+      openProjectModal: (id?: string) => set({ projectModalOpen: true, projectModalId: id || null }),
+      closeProjectModal: () => set({ projectModalOpen: false, projectModalId: null }),
+      eventModalOpen: false,
+      eventModalDate: null,
+      eventModalEventId: null,
+      openEventModal: (date: string, eventId?: string) => set({ eventModalOpen: true, eventModalDate: date, eventModalEventId: eventId || null }),
+      closeEventModal: () => set({ eventModalOpen: false, eventModalDate: null, eventModalEventId: null }),
+    }),
+    { 
+      name: 'projecthub-ui',
+      partialize: (state) => ({ 
+        theme: state.theme, 
+        sidebarCollapsed: state.sidebarCollapsed, 
+        viewMode: state.viewMode 
+      })
+    }
+  )
+);
 
 // ── Event Store ──
 

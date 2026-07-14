@@ -81,13 +81,13 @@ export function UserSelectModal() {
         </div>
 
         {/* Language Tabs */}
-        <div className="flex items-center justify-center gap-1 mb-6 bg-white/10 rounded-lg p-1 mx-auto w-fit">
+        <div className="flex items-center justify-center gap-1 mb-6 bg-surface-0/10 rounded-lg p-1 mx-auto w-fit">
           {(['ja', 'en', 'th'] as const).map((l) => (
             <button
               key={l}
               onClick={() => setLang(l)}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                lang === l ? 'bg-white text-surface-900 shadow-md' : 'text-white/60 hover:text-white/90'
+                lang === l ? 'bg-surface-0 text-surface-900 shadow-md' : 'text-white/60 hover:text-white/90'
               }`}
             >
               {l === 'ja' ? '日本語' : l === 'en' ? 'English' : 'ภาษาไทย'}
@@ -96,7 +96,7 @@ export function UserSelectModal() {
         </div>
 
         {/* Auth Form */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-2xl">
+        <div className="bg-surface-0/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-2xl">
           <h2 className="text-xl font-semibold text-white mb-6 text-center">
             {isLogin ? (lang === 'ja' ? 'ログイン' : 'Login') : (lang === 'ja' ? 'アカウント作成' : 'Sign Up')}
           </h2>
@@ -117,7 +117,7 @@ export function UserSelectModal() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-3 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
+                    className="w-full bg-surface-0/5 border border-white/10 rounded-lg pl-3 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
                     placeholder="Your Name"
                   />
                 </div>
@@ -132,7 +132,7 @@ export function UserSelectModal() {
                     required
                     value={selectedUserId}
                     onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-3 pr-4 py-2.5 text-white focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all appearance-none"
+                    className="w-full bg-surface-0/5 border border-white/10 rounded-lg pl-3 pr-4 py-2.5 text-white focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all appearance-none"
                   >
                     <option value="" disabled className="text-surface-900">Select your name</option>
                     {users.map(u => (
@@ -151,7 +151,7 @@ export function UserSelectModal() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
+                    className="w-full bg-surface-0/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
                     placeholder="name@company.com"
                   />
                 </div>
@@ -168,7 +168,7 @@ export function UserSelectModal() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={6}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
+                  className="w-full bg-surface-0/5 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all"
                   placeholder="••••••••"
                 />
               </div>

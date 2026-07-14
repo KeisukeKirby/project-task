@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
-import { getAvatarColor } from '@/lib/utils';
+import { getAvatarColor, isAdminUser } from '@/lib/utils';
 import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type Language, type ChecklistItem, type Task } from '@/types';
 import { X, Play, CheckCircle2, Clock, Calendar, Users, Flag, MessageSquare, CheckSquare, Plus, Trash2, AlertTriangle, FolderOpen, History } from 'lucide-react';
 import { generateId } from '@/lib/mock-data';
@@ -30,6 +30,19 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   const today = new Date().toISOString().split('T')[0];
 
   const isNew = !taskModalId;
+  const isViewer = currentUser?.role === 'viewer';
+  const isMember = currentUser?.role === 'member';
+  
+  // Members can only edit if it's new, or if they are assigned to it.
+  const isReadOnly = isViewer || (isMember && !isNew && !(() => {
+    try {
+      const assigns = Array.isArray(task?.assignees) ? task?.assignees : (typeof task?.assignees === 'string' ? JSON.parse(task.assignees) : []);
+      return assigns.includes(currentUser?.id);
+    } catch { return false; }
+  })());
+  
+  // Members cannot edit assignees (always themselves)
+  const canEditAssignees = !isViewer && !isMember;
 
   const [form, setForm] = useState({
     name: task?.name ? (typeof task.name === 'string' ? task.name : getMultiLangText(task.name as any, lang)) : '',
@@ -266,12 +279,12 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
             <h2 className="text-lg font-bold text-surface-900">{isNew ? t('task.new') : t('common.edit')}</h2>
           </div>
           <div className="flex items-center gap-2">
-            {task && task.status === 'todo' && (
+            {!isReadOnly && task && task.status === 'todo' && (
               <button onClick={() => { startTask(task.id); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 text-primary-600 hover:bg-primary-100 text-xs font-medium transition-all">
                 <Play className="w-3.5 h-3.5" /> {t('task.startWork')}
               </button>
             )}
-            {task && (task.status === 'in_progress' || task.status === 'review') && (
+            {!isReadOnly && task && (task.status === 'in_progress' || task.status === 'review') && (
               <button onClick={() => { completeTask(task.id); onClose(); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-medium transition-all">
                 <CheckCircle2 className="w-3.5 h-3.5" /> {t('task.completeWork')}
               </button>
@@ -290,7 +303,8 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder={t('task.name')}
-              className="w-full text-xl font-bold text-surface-900 border-0 border-b-2 border-transparent focus:border-primary-500 bg-transparent outline-none pb-2 transition-colors placeholder:text-surface-300"
+              disabled={isReadOnly}
+              className="w-full text-xl font-bold text-surface-900 border-0 border-b-2 border-transparent focus:border-primary-500 bg-transparent outline-none pb-2 transition-colors placeholder:text-surface-300 disabled:bg-transparent disabled:opacity-80"
             />
           </div>
 
@@ -303,11 +317,12 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                   <button
                     key={key}
                     onClick={() => setForm({ ...form, status: key })}
+                    disabled={isReadOnly}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       form.status === key
                         ? 'text-white shadow-sm'
                         : 'text-surface-600 bg-surface-50 hover:bg-surface-100'
-                    }`}
+                    } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
                     style={form.status === key ? { backgroundColor: conf.color } : {}}
                   >
                     {conf.icon} {getMultiLangText(conf.label, lang)}
@@ -322,11 +337,12 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                   <button
                     key={key}
                     onClick={() => setForm({ ...form, priority: key })}
+                    disabled={isReadOnly}
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       form.priority === key
                         ? 'text-white shadow-sm'
                         : 'text-surface-600 bg-surface-50 hover:bg-surface-100'
-                    }`}
+                    } ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
                     style={form.priority === key ? { backgroundColor: conf.color } : {}}
                   >
                     {conf.icon} {getMultiLangText(conf.label, lang)}
@@ -342,7 +358,8 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
             <select
               value={form.project_id}
               onChange={(e) => setForm({ ...form, project_id: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400"
+              disabled={isReadOnly}
+              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 disabled:bg-surface-50 disabled:text-surface-500"
             >
               {projects.map(p => (
                 <option key={p.id} value={p.id}>{getMultiLangText(p.name, lang)}</option>
@@ -356,10 +373,12 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
             <div className="flex flex-wrap gap-2">
               {users.map(user => {
                 const isAssigned = form.assignees.includes(user.id);
+                if (!canEditAssignees && !isAssigned) return null; // Hide unassigned if can't edit
                 return (
                   <button
                     key={user.id}
                     onClick={() => {
+                      if (!canEditAssignees) return;
                       setForm({
                         ...form,
                         assignees: isAssigned
@@ -367,11 +386,12 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                           : [...form.assignees, user.id],
                       });
                     }}
+                    disabled={!canEditAssignees}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       isAssigned
                         ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-300'
                         : 'bg-surface-50 text-surface-600 hover:bg-surface-100'
-                    }`}
+                    } ${!canEditAssignees ? 'cursor-default opacity-80' : ''}`}
                   >
                     <div className="avatar avatar-sm" style={{ backgroundColor: getAvatarColor(user.id) }}>
                       {user.name.charAt(0)}
@@ -384,7 +404,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                 );
               })}
               
-              {isAddingMember ? (
+              {canEditAssignees && (isAddingMember ? (
                 <div className="flex items-center gap-1">
                   <input
                     type="text"
@@ -414,7 +434,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                       setIsAddingMember(false);
                       setNewMemberName('');
                     }}
-                    className="px-2 py-1.5 rounded-lg border border-primary-300 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 w-32"
+                    className="px-2 py-1.5 rounded-lg border border-primary-300 text-xs bg-surface-0 focus:outline-none focus:ring-1 focus:ring-primary-500 w-32"
                   />
                 </div>
               ) : (
@@ -424,7 +444,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                 >
                   <Plus className="w-3.5 h-3.5" /> 追加
                 </button>
-              )}
+              ))}
             </div>
           </div>
 
@@ -433,17 +453,20 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1"><Calendar className="w-3 h-3" /> {t('task.startDate')}</label>
               <input type="date" value={form.planned_start_date} onChange={(e) => setForm({ ...form, planned_start_date: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+                disabled={isReadOnly}
+                className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:bg-surface-50 disabled:text-surface-500" />
             </div>
             <div>
               <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1"><Calendar className="w-3 h-3" /> {t('task.endDate')}</label>
               <input type="date" value={form.planned_end_date} onChange={(e) => setForm({ ...form, planned_end_date: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+                disabled={isReadOnly}
+                className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:bg-surface-50 disabled:text-surface-500" />
             </div>
             <div>
               <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1"><Clock className="w-3 h-3" /> {t('task.estimatedDays')}</label>
               <input type="number" min={1} value={form.estimated_lead_days} onChange={(e) => setForm({ ...form, estimated_lead_days: parseInt(e.target.value) || 1 })}
-                className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+                disabled={isReadOnly}
+                className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:bg-surface-50 disabled:text-surface-500" />
             </div>
           </div>
 
@@ -476,8 +499,9 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder={t('task.description')}
+              disabled={isReadOnly}
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 resize-none disabled:bg-surface-50 disabled:text-surface-500"
             />
           </div>
 
@@ -491,10 +515,11 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
               {formChecklist.map(item => (
                 <div key={item.id} className="flex items-center gap-2 group">
                   <button
-                    onClick={() => toggleCheckItem(item.id)}
+                    onClick={() => { if (!isReadOnly) toggleCheckItem(item.id); }}
+                    disabled={isReadOnly}
                     className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                      item.is_completed ? 'bg-primary-500 border-primary-500 text-white' : 'border-surface-300 hover:border-primary-400'
-                    }`}
+                      item.is_completed ? 'bg-primary-500 border-primary-500 text-white' : 'border-surface-300'
+                    } ${!isReadOnly && !item.is_completed ? 'hover:border-primary-400' : ''} ${isReadOnly ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
                     {item.is_completed && <CheckCircle2 className="w-3 h-3" />}
                   </button>
@@ -506,12 +531,13 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                       onChange={(e) => setEditCheckItemTitle(e.target.value)}
                       onBlur={() => saveCheckItemEdit(item.id)}
                       onKeyDown={(e) => e.key === 'Enter' && saveCheckItemEdit(item.id)}
-                      className="flex-1 text-sm px-1 py-0.5 border border-primary-300 rounded bg-white outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                      className="flex-1 text-sm px-1 py-0.5 border border-primary-300 rounded bg-surface-0 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                   ) : (
                     <span 
-                      className={`text-sm flex-1 cursor-pointer hover:bg-surface-50 px-1 py-0.5 -mx-1 rounded transition-colors ${item.is_completed ? 'text-surface-400 line-through' : 'text-surface-700'}`}
+                      className={`text-sm flex-1 px-1 py-0.5 -mx-1 rounded transition-colors ${item.is_completed ? 'text-surface-400 line-through' : 'text-surface-700'} ${!isReadOnly ? 'cursor-pointer hover:bg-surface-50' : ''}`}
                       onClick={() => {
+                        if (isReadOnly) return;
                         setEditingCheckItemId(item.id);
                         setEditCheckItemTitle(typeof item.title === 'string' ? item.title : getMultiLangText(item.title, lang));
                       }}
@@ -523,8 +549,9 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                   {/* Assignee */}
                   <select
                     value={item.assignee_id || ''}
+                    disabled={isReadOnly}
                     onChange={(e) => setFormChecklist(prev => prev.map(c => c.id === item.id ? { ...c, assignee_id: e.target.value || null } : c))}
-                    className="w-24 px-1 py-1 text-xs rounded-md border border-surface-200 text-surface-600 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500/50"
+                    className="w-24 px-1 py-1 text-xs rounded-md border border-surface-200 text-surface-600 bg-surface-0 focus:outline-none focus:ring-1 focus:ring-primary-500/50 disabled:bg-surface-50"
                   >
                     <option value="">未割当</option>
                     {users.filter(u => projects.find(p => p.id === form.project_id)?.members?.some((m: any) => m.user_id === u.id)).map(u => (
@@ -536,31 +563,36 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                   <input
                     type="date"
                     value={item.due_date || ''}
+                    disabled={isReadOnly}
                     onChange={(e) => setFormChecklist(prev => prev.map(c => c.id === item.id ? { ...c, due_date: e.target.value || null } : c))}
-                    className="px-1 py-1 text-xs rounded-md border border-surface-200 text-surface-500 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500/50"
+                    className="px-1 py-1 text-xs rounded-md border border-surface-200 text-surface-500 bg-surface-0 focus:outline-none focus:ring-1 focus:ring-primary-500/50 disabled:bg-surface-50"
                   />
                   
-                  <button
-                    onClick={() => setFormChecklist(prev => prev.filter(c => c.id !== item.id))}
-                    className="opacity-0 group-hover:opacity-100 text-surface-400 hover:text-danger transition-all p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      onClick={() => setFormChecklist(prev => prev.filter(c => c.id !== item.id))}
+                      className="opacity-0 group-hover:opacity-100 text-surface-400 hover:text-danger transition-all p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="text"
-                  value={newCheckItem}
-                  onChange={(e) => setNewCheckItem(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddCheckItem()}
-                  placeholder={t('task.addChecklist') || 'Add Subtask'}
-                  className="flex-1 px-3 py-1.5 rounded-lg border border-dashed border-surface-300 text-sm bg-transparent focus:outline-none focus:border-primary-400 placeholder:text-surface-300"
-                />
-                <button onClick={handleAddCheckItem} className="p-1.5 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors">
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+              {!isReadOnly && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={newCheckItem}
+                    onChange={(e) => setNewCheckItem(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddCheckItem()}
+                    placeholder={t('task.addChecklist') || 'Add Subtask'}
+                    className="flex-1 px-3 py-1.5 rounded-lg border border-dashed border-surface-300 text-sm bg-transparent focus:outline-none focus:border-primary-400 placeholder:text-surface-300"
+                  />
+                  <button onClick={handleAddCheckItem} className="p-1.5 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           
@@ -630,7 +662,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t border-surface-200 bg-surface-50/50">
           <div className="flex items-center gap-2">
-            {task && (
+            {!isReadOnly && task && (
               <button
                 onClick={() => { deleteTask(task.id); onClose(); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-danger bg-red-50 hover:bg-red-100 text-xs font-medium transition-all"
@@ -641,22 +673,24 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-surface-600 hover:bg-surface-100 transition-colors">
-              {t('common.cancel')}
+              {isReadOnly ? t('common.close') || 'Close' : t('common.cancel')}
             </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  {t('common.saving') || 'Saving...'}
-                </>
-              ) : (
-                isNew ? t('common.create') : t('common.save')
-              )}
-            </button>
+            {!isReadOnly && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-5 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    {t('common.saving') || 'Saving...'}
+                  </>
+                ) : (
+                  isNew ? t('common.create') : t('common.save')
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

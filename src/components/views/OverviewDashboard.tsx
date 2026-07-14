@@ -117,7 +117,7 @@ export function OverviewDashboard() {
                   return (
                     <div 
                       key={task.id}
-                      className="flex items-start gap-3 p-3 rounded-xl border border-surface-200 hover:border-rose-300 bg-white transition-all group cursor-pointer"
+                      className="flex items-start gap-3 p-3 rounded-xl border border-surface-200 hover:border-rose-300 bg-surface-0 transition-all group cursor-pointer"
                       onClick={() => openTaskModal(task.id)}
                     >
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 bg-rose-50 flex-shrink-0 mt-0.5">
@@ -184,8 +184,8 @@ export function OverviewDashboard() {
                 {upcomingEvents.slice(0, 5).map((ev) => {
                   const targetProject = projects.find(p => p.id === ev.project_id);
                   return (
-                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-xl border border-surface-100 bg-surface-50/50 hover:bg-white hover:border-primary-200 transition-colors">
-                      <div className="flex flex-col items-center justify-center min-w-[3rem] px-2 py-1 bg-white rounded-lg border border-surface-200 shadow-sm">
+                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-xl border border-surface-100 bg-surface-50/50 hover:bg-surface-0 hover:border-primary-200 transition-colors">
+                      <div className="flex flex-col items-center justify-center min-w-[3rem] px-2 py-1 bg-surface-0 rounded-lg border border-surface-200 shadow-sm">
                         <span className="text-[10px] text-surface-500 font-medium uppercase">{new Date(ev.date).toLocaleDateString('en-US', { month: 'short' })}</span>
                         <span className="text-lg font-bold text-surface-900 leading-none my-0.5">{new Date(ev.date).getDate()}</span>
                       </div>
@@ -248,8 +248,8 @@ export function OverviewDashboard() {
               <span className="text-xs opacity-70">{t('dashboard.completionRate')}</span>
             </div>
             <div className="text-3xl font-bold">{completionRate}%</div>
-            <div className="progress-bar mt-2 bg-white/20">
-              <div className="progress-bar-fill bg-white/80" style={{ width: `${completionRate}%` }} />
+            <div className="progress-bar mt-2 bg-surface-0/20">
+              <div className="progress-bar-fill bg-surface-0/80" style={{ width: `${completionRate}%` }} />
             </div>
           </div>
           <div className="stat-card bg-gradient-to-br from-rose-500 to-pink-600">

@@ -133,7 +133,7 @@ export function ProjectModal({ onClose }: { onClose: () => void }) {
                 className="w-full text-lg font-bold text-surface-900 border-0 border-b-2 border-transparent focus:border-primary-500 bg-transparent outline-none pb-2 transition-colors placeholder:text-surface-300" />
               <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder={t('project.description')} rows={2}
-                className="w-full mt-2 px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 resize-none" />
+                className="w-full mt-2 px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20 resize-none" />
             </div>
           </div>
 
@@ -153,14 +153,14 @@ export function ProjectModal({ onClose }: { onClose: () => void }) {
           <div>
             <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1"><Calendar className="w-3 h-3" /> {t('project.deadline')}</label>
             <input type="date" value={form.deadline_date} onChange={(e) => setForm({ ...form, deadline_date: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
           </div>
 
           {/* Template */}
           <div>
             <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1"><FileText className="w-3 h-3" /> {t('project.template')}</label>
             <select value={form.template_id} onChange={(e) => setForm({ ...form, template_id: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20">
+              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20">
               <option value="">{t('common.none')}</option>
               {templates.map(tpl => (
                 <option key={tpl.id} value={tpl.id}>{getMultiLangText(tpl.name, lang)}</option>

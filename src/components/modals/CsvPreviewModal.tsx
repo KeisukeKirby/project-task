@@ -54,7 +54,7 @@ export function CsvPreviewModal({ rows: initialRows, onConfirm, onClose }: CsvPr
 
         {/* Content (Table) */}
         <div className="flex-1 overflow-auto p-4 bg-surface-50">
-          <div className="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
+          <div className="bg-surface-0 rounded-xl border border-surface-200 shadow-sm overflow-hidden">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-surface-50 text-surface-500 border-b border-surface-200">
                 <tr>
@@ -118,7 +118,7 @@ export function CsvPreviewModal({ rows: initialRows, onConfirm, onClose }: CsvPr
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-surface-200 bg-white">
+        <div className="flex items-center justify-between p-4 border-t border-surface-200 bg-surface-0">
           <p className="text-sm text-surface-500">
             {rows.length} task(s) ready to import. You can edit the text directly before confirming.
           </p>

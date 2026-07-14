@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard, ListTodo, Columns3, BarChart3, Calendar,
   FileText, Settings, Settings as SettingsIcon, ChevronLeft, Menu, Plus, Search,
-  AlertCircle, Clock, FolderOpen, LogOut, Bell
+  AlertCircle, Clock, FolderOpen, LogOut, Bell, Sun, Moon
 } from 'lucide-react';
 import { OverviewDashboard } from '@/components/views/OverviewDashboard';
 import { MyTasksDashboard } from '@/components/views/MyTasksDashboard';
@@ -43,6 +43,7 @@ export function DashboardShell() {
     taskModalOpen, closeTaskModal, openTaskModal,
     projectModalOpen, openProjectModal, closeProjectModal,
     eventModalOpen,
+    theme, setTheme,
   } = useUIStore();
   const { currentUser, setCurrentUser } = useUserStore();
   const projects = useProjectStore((s) => s.projects);
@@ -51,6 +52,7 @@ export function DashboardShell() {
   const [showUserSelect, setShowUserSelect] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   
   // Use supabase for auth session fetching
 
@@ -81,6 +83,20 @@ export function DashboardShell() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (theme === 'system') {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
 
   const fetchUserProfile = async (userId: string, email?: string) => {
     // Map mktbarefootincth@gmail.com directly to the Beer mock user without requiring a public.users row
@@ -176,7 +192,7 @@ export function DashboardShell() {
         className={`fixed md:relative z-40 h-full transition-all duration-300 ease-out flex flex-col
           ${sidebarCollapsed ? 'w-[68px]' : 'w-[260px]'}
           ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          bg-white border-r border-surface-200`}
+          bg-surface-0 border-r border-surface-200`}
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-surface-100 flex-shrink-0">
@@ -310,15 +326,17 @@ export function DashboardShell() {
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className="text-[10px] text-surface-400">{progress}%</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openProjectModal(proj.id);
-                    }}
-                    className="p-1 text-surface-400 hover:text-primary-600 rounded transition-colors"
-                  >
-                    <SettingsIcon className="w-3.5 h-3.5" />
-                  </button>
+                  {isAdminUser(currentUser) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openProjectModal(proj.id);
+                      }}
+                      className="p-1 text-surface-400 hover:text-primary-600 rounded transition-colors"
+                    >
+                      <SettingsIcon className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -326,7 +344,7 @@ export function DashboardShell() {
         </nav>
 
         {/* Sidebar Footer */}
-        {!sidebarCollapsed && (
+        {!sidebarCollapsed && isAdminUser(currentUser) && (
           <div className="p-3 border-t border-surface-100 flex-shrink-0">
             <button
               onClick={() => openProjectModal()}
@@ -347,7 +365,7 @@ export function DashboardShell() {
       {/* ═══ Main Area ═══ */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-16 flex items-center gap-4 px-4 md:px-6 border-b border-surface-200 bg-white/80 backdrop-blur-sm flex-shrink-0 z-20">
+        <header className="h-16 flex items-center gap-4 px-4 md:px-6 border-b border-surface-200 bg-surface-0/80 backdrop-blur-sm flex-shrink-0 z-20">
           {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileSidebarOpen(true)}
@@ -388,28 +406,94 @@ export function DashboardShell() {
             ))}
           </div>
 
-          {/* Notifications */}
-          <button className="relative text-surface-400 hover:text-surface-600 transition-colors">
-            <Bell className="w-5 h-5" />
-            {overdueTasks.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center">
-                {overdueTasks.length}
-              </span>
-            )}
+          {/* Theme Toggle */}
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded-lg transition-colors"
+            title="Toggle theme"
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
 
-          {/* New Task Button */}
-          <div className="hidden sm:flex items-center gap-2">
-            <CsvExportButton />
-            <CsvImportButton />
-            <button
-              onClick={() => openTaskModal()}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg text-sm font-medium hover:from-primary-600 hover:to-primary-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+          {/* Notifications */}
+          <div className="relative">
+            <button 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setNotificationsOpen(prev => !prev);
+              }}
+              className="relative text-surface-400 hover:text-surface-600 transition-colors p-1"
             >
-              <Plus className="w-4 h-4" />
-              <span>{t('task.new')}</span>
+              <Bell className="w-5 h-5 pointer-events-none" />
+              {overdueTasks.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center pointer-events-none">
+                  {overdueTasks.length}
+                </span>
+              )}
             </button>
+            
+            {notificationsOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-[90]" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setNotificationsOpen(false);
+                  }}
+                />
+                <div className="absolute right-0 mt-2 w-80 bg-surface-0 rounded-lg shadow-xl border border-surface-200 py-2 z-[100]">
+                  <div className="px-4 py-2 border-b border-surface-100 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-surface-900">通知</h3>
+                    <span className="text-xs text-surface-500">{overdueTasks.length}件</span>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {overdueTasks.length > 0 ? (
+                      overdueTasks.map(task => (
+                        <div 
+                          key={task.id} 
+                          className="px-4 py-3 hover:bg-surface-50 border-b border-surface-50 last:border-0 cursor-pointer transition-colors" 
+                          onClick={() => { 
+                            openTaskModal(task.id); 
+                            setNotificationsOpen(false); 
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-2 h-2 mt-1.5 rounded-full bg-danger shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-surface-900 line-clamp-2">{getMultiLangText(task.name, lang)}</p>
+                              <p className="text-xs text-danger mt-1">期限超過: {task.planned_end_date}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-6 text-center text-surface-500 text-sm">
+                        新しい通知はありません
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
+
+          {/* New Task Button */}
+          {currentUser?.role !== 'viewer' && (
+            <div className="hidden sm:flex items-center gap-2">
+              <CsvExportButton />
+              <CsvImportButton />
+              <button
+                onClick={() => openTaskModal()}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg text-sm font-medium hover:from-primary-600 hover:to-primary-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{t('task.new')}</span>
+              </button>
+            </div>
+          )}
 
           {/* User Avatar & Dropdown */}
           <div className="relative">
@@ -436,7 +520,7 @@ export function DashboardShell() {
                   className="fixed inset-0 z-40" 
                   onClick={() => setUserMenuOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-surface-100 py-1 z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-surface-0 rounded-xl shadow-xl border border-surface-100 py-1 z-50">
                   <button
                     onClick={() => {
                       setUserMenuOpen(false);

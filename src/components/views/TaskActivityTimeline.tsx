@@ -66,7 +66,7 @@ export function TaskActivityTimeline() {
                   <div className={`absolute -left-3.5 top-0.5 w-7 h-7 rounded-full flex items-center justify-center ${bgColor} border-2 border-white shadow-sm`}>
                     <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
                   </div>
-                  <div className="bg-white p-3 rounded-xl border border-surface-100 shadow-sm">
+                  <div className="bg-surface-0 p-3 rounded-xl border border-surface-100 shadow-sm">
                     <div className="flex justify-between items-start mb-1">
                       <div className="flex items-center gap-2">
                         {user ? (

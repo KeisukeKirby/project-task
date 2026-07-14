@@ -97,7 +97,7 @@ export function EventModal() {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Event Title..."
               autoFocus
-              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20" 
+              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20" 
             />
           </div>
 
@@ -108,7 +108,7 @@ export function EventModal() {
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+              className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm bg-surface-0 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             >
               <option value="">(All Projects) Global Event</option>
               {projects.map(p => (

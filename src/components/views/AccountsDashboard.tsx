@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useUserStore } from '@/stores';
 import { useI18n } from '@/i18n';
 import { supabase } from '@/lib/supabase';
-import { Shield, ShieldAlert, Key, UserPlus, CheckCircle2, User as UserIcon } from 'lucide-react';
+import { Shield, ShieldAlert, Key, UserPlus, CheckCircle2, User as UserIcon, Edit2, Check, X } from 'lucide-react';
 import { getAvatarColor, isAdminUser } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
@@ -20,6 +20,11 @@ export function AccountsDashboard() {
   const [isCreating, setIsCreating] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editEmailValue, setEditEmailValue] = useState('');
+  const [editNameValue, setEditNameValue] = useState('');
+  const [editRoleValue, setEditRoleValue] = useState<UserRole>('member');
 
   // Check admin rights
   if (!isAdminUser(currentUser)) {
@@ -110,6 +115,44 @@ export function AccountsDashboard() {
       alert('ユーザーを削除しました。');
     } catch (err: any) {
       alert(err.message || '削除に失敗しました。');
+    }
+  };
+
+  const startEditingUser = (userId: string, currentEmail: string, currentName: string, currentRole: UserRole) => {
+    setEditingUserId(userId);
+    setEditEmailValue(currentEmail);
+    setEditNameValue(currentName);
+    setEditRoleValue(currentRole);
+  };
+
+  const cancelEditingUser = () => {
+    setEditingUserId(null);
+    setEditEmailValue('');
+    setEditNameValue('');
+  };
+
+  const handleUpdateUser = async (userId: string) => {
+    if (!editEmailValue.trim() || !editNameValue.trim()) return;
+    if (!confirm('ユーザー情報を変更してよろしいですか？')) {
+      cancelEditingUser();
+      return;
+    }
+    
+    try {
+      const { data, error: dbError } = await supabase.from('users').update({ email: editEmailValue, name: editNameValue, role: editRoleValue }).eq('id', userId).select();
+      if (dbError) throw dbError;
+      if (!data || data.length === 0) {
+        console.warn('DB update returned 0 rows. RLS might be preventing the update.');
+      }
+      
+      useUserStore.setState(state => ({
+        users: state.users.map(u => u.id === userId ? { ...u, email: editEmailValue, name: editNameValue, role: editRoleValue } : u)
+      }));
+      alert('ユーザー情報を変更しました。');
+    } catch (err: any) {
+      alert(err.message || 'ユーザー情報の変更に失敗しました。');
+    } finally {
+      cancelEditingUser();
     }
   };
 
@@ -218,41 +261,96 @@ export function AccountsDashboard() {
                 {users.map(user => (
                   <tr key={user.id} className="hover:bg-surface-50/50">
                     <td className="py-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 group">
                         <div className="avatar avatar-sm ring-2 ring-white" style={{ backgroundColor: getAvatarColor(user.id) }}>
                           {user.name.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-medium text-surface-900 text-sm">{user.name}</span>
+                        {editingUserId === user.id ? (
+                          <input 
+                            type="text" 
+                            value={editNameValue}
+                            onChange={(e) => setEditNameValue(e.target.value)}
+                            className="px-2 py-1 bg-surface-0 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none w-[120px]"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleUpdateUser(user.id);
+                              if (e.key === 'Escape') cancelEditingUser();
+                            }}
+                          />
+                        ) : (
+                          <>
+                            <span className="font-medium text-surface-900 text-sm">{user.name}</span>
+                            <button 
+                              onClick={() => startEditingUser(user.id, user.email, user.name, user.role)}
+                              className="p-1 text-surface-400 opacity-0 group-hover:opacity-100 hover:text-primary-600 hover:bg-primary-50 rounded transition-all"
+                              title="編集"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
-                    <td className="py-3 text-sm text-surface-600">{user.email}</td>
-                    <td className="py-3">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        user.role === 'admin' ? 'bg-primary-100 text-primary-700' : 
-                        user.role === 'member' ? 'bg-emerald-100 text-emerald-700' : 
-                        'bg-surface-100 text-surface-700'
-                      }`}>
-                        {user.role}
-                      </span>
+                    <td className="py-3 text-sm text-surface-600">
+                      {editingUserId === user.id ? (
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="email" 
+                            value={editEmailValue}
+                            onChange={(e) => setEditEmailValue(e.target.value)}
+                            className="px-2 py-1 bg-surface-0 border border-surface-300 rounded text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none w-full max-w-[200px]"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleUpdateUser(user.id);
+                              if (e.key === 'Escape') cancelEditingUser();
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <span>{user.email}</span>
+                      )}
                     </td>
                     <td className="py-3">
-                      <select 
-                        value={user.role}
-                        onChange={(e) => handleUpdateRole(user.id, e.target.value as UserRole)}
-                        className="text-xs bg-surface-50 border border-surface-200 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 focus:outline-none"
-                      >
-                        <option value="owner">オーナー</option>
-                        <option value="admin">管理者</option>
-                        <option value="member">一般メンバー</option>
-                        <option value="viewer">閲覧者</option>
-                      </select>
-                      <span className="text-surface-300 mx-2">|</span>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:underline"
-                      >
-                        削除
-                      </button>
+                      {editingUserId === user.id ? (
+                        <div className="flex items-center gap-2">
+                          <select 
+                            value={editRoleValue}
+                            onChange={(e) => setEditRoleValue(e.target.value as UserRole)}
+                            className="text-xs bg-surface-0 border border-surface-300 rounded px-2 py-1 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleUpdateUser(user.id);
+                              if (e.key === 'Escape') cancelEditingUser();
+                            }}
+                          >
+                            <option value="owner">オーナー</option>
+                            <option value="admin">管理者</option>
+                            <option value="member">一般メンバー</option>
+                            <option value="viewer">閲覧者</option>
+                          </select>
+                          <button onClick={() => handleUpdateUser(user.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="保存">
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button onClick={cancelEditingUser} className="p-1 text-rose-600 hover:bg-rose-50 rounded" title="キャンセル">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            user.role === 'admin' || user.role === 'owner' ? 'bg-primary-100 text-primary-700' : 
+                            user.role === 'member' ? 'bg-emerald-100 text-emerald-700' : 
+                            'bg-surface-100 text-surface-700'
+                          }`}>
+                            {user.role}
+                          </span>
+                          <span className="text-surface-300 mx-2">|</span>
+                          <button 
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:underline"
+                          >
+                            削除
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

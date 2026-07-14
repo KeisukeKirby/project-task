@@ -16,7 +16,12 @@ export function KanbanView() {
   const projects = useProjectStore((s) => s.projects);
   const users = useUserStore((s) => s.users);
   const { selectedProjectId, openTaskModal, openProjectModal } = useUIStore();
+  const currentUser = useUserStore((s) => s.currentUser);
   const today = new Date().toISOString().split('T')[0];
+  
+  const isViewer = currentUser?.role === 'viewer';
+  const isMember = currentUser?.role === 'member';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
   const filteredTasks = selectedProjectId
     ? tasks.filter(t => t.project_id === selectedProjectId)
@@ -45,6 +50,7 @@ export function KanbanView() {
   const [editNameValue, setEditNameValue] = React.useState('');
 
   const handleNameEdit = (proj: any) => {
+    if (!isAdmin) return;
     setEditingProjectId(proj.id);
     setEditNameValue(getMultiLangText(proj.name, lang));
   };
@@ -102,19 +108,21 @@ export function KanbanView() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <h2 
-                      className="text-lg font-bold text-surface-900 hover:text-primary-600 cursor-pointer transition-colors"
+                      className={`text-lg font-bold text-surface-900 ${isAdmin ? 'hover:text-primary-600 cursor-pointer' : ''} transition-colors`}
                       onClick={() => handleNameEdit(proj)}
-                      title={t('common.edit')}
+                      title={isAdmin ? t('common.edit') : undefined}
                     >
                       {getMultiLangText(proj.name, lang)}
                     </h2>
-                    <button
-                      onClick={() => openProjectModal(proj.id)}
-                      className="p-1.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                      title={t('project.edit')}
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => openProjectModal(proj.id)}
+                        className="p-1.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title={t('project.edit')}
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 )}
                 <button
@@ -123,17 +131,19 @@ export function KanbanView() {
                 >
                   × {t('common.all')}
                 </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm(t('common.confirmDelete') || 'Are you sure you want to delete this project?')) {
-                      useProjectStore.getState().deleteProject(proj.id);
-                      useUIStore.getState().setSelectedProjectId(null);
-                    }
-                  }}
-                  className="text-xs text-danger hover:text-red-700 ml-2 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-full transition-colors flex items-center gap-1"
-                >
-                  <Trash2 className="w-3 h-3" /> {t('common.delete')}
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm(t('common.confirmDelete') || 'Are you sure you want to delete this project?')) {
+                        useProjectStore.getState().deleteProject(proj.id);
+                        useUIStore.getState().setSelectedProjectId(null);
+                      }
+                    }}
+                    className="text-xs text-danger hover:text-red-700 ml-2 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-full transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" /> {t('common.delete')}
+                  </button>
+                )}
               </>
             );
           })()}
@@ -152,9 +162,17 @@ export function KanbanView() {
             <div
               key={status}
               className="kanban-column flex-shrink-0 w-[300px]"
-              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-primary-300'); }}
-              onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-primary-300'); }}
+              onDragOver={(e) => { 
+                if (isViewer) return;
+                e.preventDefault(); 
+                e.currentTarget.classList.add('ring-2', 'ring-primary-300'); 
+              }}
+              onDragLeave={(e) => { 
+                if (isViewer) return;
+                e.currentTarget.classList.remove('ring-2', 'ring-primary-300'); 
+              }}
               onDrop={(e) => {
+                if (isViewer) return;
                 e.preventDefault();
                 e.currentTarget.classList.remove('ring-2', 'ring-primary-300');
                 const taskId = e.dataTransfer.getData('taskId');
@@ -178,17 +196,22 @@ export function KanbanView() {
                   const project = projects.find(p => p.id === task.project_id);
                   const isOverdue = task.planned_end_date && task.planned_end_date < today && task.status !== 'done';
                   const priorityConf = PRIORITY_CONFIG[task.priority];
+                  const isReadOnly = isViewer || (isMember && !task.assignees.includes(currentUser?.id || ''));
 
                   return (
                     <div
                       key={task.id}
-                      className={`kanban-card ${isOverdue ? 'border-l-3 border-l-danger' : ''}`}
-                      draggable
+                      className={`kanban-card ${isOverdue ? 'border-l-3 border-l-danger' : ''} ${isReadOnly ? 'cursor-pointer' : ''}`}
+                      draggable={!isReadOnly}
                       onDragStart={(e) => {
+                        if (isReadOnly) {
+                          e.preventDefault();
+                          return;
+                        }
                         e.dataTransfer.setData('taskId', task.id);
                         e.currentTarget.classList.add('opacity-50');
                       }}
-                      onDragEnd={(e) => { e.currentTarget.classList.remove('opacity-50'); }}
+                      onDragEnd={(e) => { if (!isReadOnly) e.currentTarget.classList.remove('opacity-50'); }}
                       onClick={() => openTaskModal(task.id)}
                     >
                       {/* Priority & Project */}

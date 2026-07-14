@@ -5,7 +5,7 @@ import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUIStore, useUserStore, useEventStore } from '@/stores';
 import { STATUS_CONFIG, Project, Task, ChecklistItem } from '@/types';
 import { ZoomIn, ZoomOut, Maximize2, CheckSquare, Settings } from 'lucide-react';
-import { isHoliday } from '@/lib/utils';
+import { isHoliday, isAdminUser } from '@/lib/utils';
 
 type GanttRow = 
   | { type: 'project'; project: Project; id: string }
@@ -26,6 +26,9 @@ export function GanttView() {
   const openEventModal = useUIStore((s) => s.openEventModal);
   const reorderProjects = useProjectStore((s) => s.reorderProjects);
   const [draggedProjectIdx, setDraggedProjectIdx] = useState<number | null>(null);
+
+  const currentUser = useUserStore((s) => s.currentUser);
+  const isAdmin = isAdminUser(currentUser);
 
   const handleDragStart = (e: React.DragEvent, globalIndex: number) => {
     setDraggedProjectIdx(globalIndex);
@@ -205,9 +208,9 @@ export function GanttView() {
       <div className="flex-1 overflow-auto card">
         <div className="flex min-h-full">
           {/* Task List (Left Panel) */}
-          <div className="w-[240px] min-w-[240px] border-r border-surface-200 bg-white z-30 sticky left-0 shadow-[2px_0_10px_rgba(0,0,0,0.05)]">
+          <div className="w-[240px] min-w-[240px] border-r border-surface-200 bg-surface-0 z-30 sticky left-0 shadow-[2px_0_10px_rgba(0,0,0,0.05)]">
             {/* Header */}
-            <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1 sticky top-0 bg-white z-40">
+            <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1 sticky top-0 bg-surface-0 z-40">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">{t('task.title')}</span>
                 <select
@@ -229,23 +232,25 @@ export function GanttView() {
                 return (
                   <div
                     key={row.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, globalIndex)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, globalIndex)}
-                    onDragEnd={handleDragEnd}
-                    className="gantt-draggable-project flex items-center gap-2 px-4 bg-surface-50/80 cursor-move hover:bg-surface-100 transition-colors"
+                    draggable={isAdmin}
+                    onDragStart={isAdmin ? (e) => handleDragStart(e, globalIndex) : undefined}
+                    onDragOver={isAdmin ? handleDragOver : undefined}
+                    onDrop={isAdmin ? (e) => handleDrop(e, globalIndex) : undefined}
+                    onDragEnd={isAdmin ? handleDragEnd : undefined}
+                    className={`${isAdmin ? 'gantt-draggable-project cursor-move' : ''} flex items-center gap-2 px-4 bg-surface-50/80 hover:bg-surface-100 transition-colors`}
                     style={{ height: ROW_HEIGHT }}
                   >
                     <span className="text-sm font-bold text-surface-900 truncate flex-1 flex items-center gap-2 pointer-events-none">
                       {getMultiLangText(row.project.name, lang)}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openProjectModal(row.project.id); }}
-                        className="p-1 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors pointer-events-auto"
-                        title={t('project.edit')}
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openProjectModal(row.project.id); }}
+                          className="p-1 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors pointer-events-auto"
+                          title={t('project.edit')}
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </span>
                   </div>
                 );
@@ -305,7 +310,7 @@ export function GanttView() {
           {/* Timeline (Right Panel) */}
           <div className="flex-1 relative">
             {/* Month Headers */}
-            <div className="h-[30px] flex border-b border-surface-200 sticky top-0 bg-white z-20">
+            <div className="h-[30px] flex border-b border-surface-200 sticky top-0 bg-surface-0 z-20">
               {months.map((m, i) => (
                 <div key={i} className="flex items-center justify-center text-[10px] font-semibold text-surface-600 border-r border-surface-100"
                   style={{ width: m.days * dayWidth, minWidth: m.days * dayWidth }}>
@@ -315,7 +320,7 @@ export function GanttView() {
             </div>
 
             {/* Day Headers */}
-            <div className="h-[30px] flex border-b border-surface-200 sticky top-[30px] bg-white z-20">
+            <div className="h-[30px] flex border-b border-surface-200 sticky top-[30px] bg-surface-0 z-20">
               {dayDates.map((d, i) => {
                 const date = new Date(d);
                 const isSaturday = date.getDay() === 6;
@@ -324,14 +329,14 @@ export function GanttView() {
                 return (
                   <div
                     key={d}
-                    className={`flex items-center justify-center text-[10px] border-r border-surface-50 flex-shrink-0 cursor-pointer transition-colors ${
+                    className={`flex items-center justify-center text-[10px] border-r border-surface-50 flex-shrink-0 ${isAdmin ? 'cursor-pointer' : ''} transition-colors ${
                       isToday ? 'bg-primary-50 text-primary-700 font-bold' :
                       isSundayOrHoliday ? 'bg-red-50 text-red-600 hover:bg-red-100' :
                       isSaturday ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' :
                       'text-surface-500 hover:bg-surface-100'
                     }`}
                     style={{ width: dayWidth, minWidth: dayWidth }}
-                    onClick={() => openEventModal(d)}
+                    onClick={isAdmin ? () => openEventModal(d) : undefined}
                   >
                     {date.getDate()}
                   </div>
@@ -407,17 +412,19 @@ export function GanttView() {
                     </div>
                     
                     {activeEventId === event.id && (
-                      <div className="absolute top-10 left-full ml-2 bg-white text-surface-800 px-3 py-2 rounded-lg shadow-xl border border-surface-200 z-50 whitespace-nowrap text-sm flex flex-col gap-1 pointer-events-auto">
+                      <div className="absolute top-10 left-full ml-2 bg-surface-0 text-surface-800 px-3 py-2 rounded-lg shadow-xl border border-surface-200 z-50 whitespace-nowrap text-sm flex flex-col gap-1 pointer-events-auto">
                         <div className="flex items-center justify-between gap-4">
                           <span className="font-bold" style={{ color: event.color }}>{event.title}</span>
                           <div className="flex items-center gap-1">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); openEventModal(event.date, event.id); setActiveEventId(null); }}
-                              className="text-surface-400 hover:text-primary-600 transition-colors p-1"
-                              title={t('common.edit') || 'Edit'}
-                            >
-                              <Settings className="w-3.5 h-3.5" />
-                            </button>
+                            {isAdmin && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); openEventModal(event.date, event.id); setActiveEventId(null); }}
+                                className="text-surface-400 hover:text-primary-600 transition-colors p-1"
+                                title={t('common.edit') || 'Edit'}
+                              >
+                                <Settings className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <button 
                               onClick={(e) => { e.stopPropagation(); setActiveEventId(null); }}
                               className="text-surface-400 hover:text-surface-600 p-1"

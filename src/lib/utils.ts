@@ -27,7 +27,7 @@ export function isHoliday(dateStr: string): boolean {
 
 export function isAdminUser(user: any): boolean {
   if (!user) return false;
-  if (user.role === 'admin') return true;
+  if (user.role === 'admin' || user.role === 'owner') return true;
   
   const email = (user.email || '').toLowerCase();
   const name = (user.name || '').toLowerCase();
