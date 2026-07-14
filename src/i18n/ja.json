@@ -4,7 +4,7 @@
     "subtitle": "プロジェクト進捗管理"
   },
   "nav": {
-    "overview": "全体ダッシュボード",
+    "overview": "掲示板",
     "myTasks": "マイタスク",
     "kanban": "カンバン",
     "gantt": "ガントチャート",
