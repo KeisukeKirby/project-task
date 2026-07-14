@@ -18,9 +18,20 @@ export async function POST(req: Request) {
         const res = await translate(text, { to: lang }) as any;
         translations[lang] = res.text;
       } catch (err) {
-        console.error(`Failed to translate to ${lang}:`, err);
-        // Fallback to original text if translation fails
-        translations[lang] = text;
+        console.error(`Google Translate failed for ${lang}:`, err);
+        // Fallback to MyMemory API if google-translate-api-x gets blocked by Vercel
+        try {
+          const fallbackRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=auto|${lang}`);
+          const fallbackData = await fallbackRes.json();
+          if (fallbackData.responseData && fallbackData.responseData.translatedText) {
+            translations[lang] = fallbackData.responseData.translatedText;
+          } else {
+            translations[lang] = text;
+          }
+        } catch (fallbackErr) {
+          console.error(`Fallback translation failed for ${lang}:`, fallbackErr);
+          translations[lang] = text;
+        }
       }
     }
 
