@@ -46,7 +46,7 @@ export function DashboardShell() {
     theme, setTheme,
   } = useUIStore();
   const { currentUser, setCurrentUser } = useUserStore();
-  const projects = useProjectStore((s) => s.projects);
+  const projects = useProjectStore((s) => s.projects).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   const tasks = useTaskStore((s) => s.tasks);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showUserSelect, setShowUserSelect] = useState(true);

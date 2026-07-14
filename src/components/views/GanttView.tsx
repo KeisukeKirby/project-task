@@ -16,7 +16,7 @@ export function GanttView() {
   const { lang, t, formatDate } = useI18n();
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const tasks = useTaskStore((s) => s.tasks);
-  const projects = useProjectStore((s) => s.projects);
+  const projects = useProjectStore((s) => s.projects).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   const { openTaskModal, openProjectModal } = useUIStore();
   const users = useUserStore((s) => s.users);
   const [localSelectedProjectId, setLocalSelectedProjectId] = useState<string | null>(null);

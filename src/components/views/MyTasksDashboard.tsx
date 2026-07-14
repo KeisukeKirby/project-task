@@ -15,7 +15,7 @@ export function MyTasksDashboard() {
   const updateTask = useTaskStore((s) => s.updateTask);
   const users = useUserStore((s) => s.users);
   const currentUser = useUserStore((s) => s.currentUser);
-  const projects = useProjectStore((s) => s.projects);
+  const projects = useProjectStore((s) => s.projects).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   const { openTaskModal } = useUIStore();
 
   const [targetUserId, setTargetUserId] = useState<string>(currentUser?.id || '');

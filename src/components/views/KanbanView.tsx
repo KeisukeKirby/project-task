@@ -13,7 +13,7 @@ export function KanbanView() {
   const { lang, t, formatDate } = useI18n();
   const tasks = useTaskStore((s) => s.tasks);
   const updateTask = useTaskStore((s) => s.updateTask);
-  const projects = useProjectStore((s) => s.projects);
+  const projects = useProjectStore((s) => s.projects).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   const users = useUserStore((s) => s.users);
   const { selectedProjectId, openTaskModal, openProjectModal } = useUIStore();
   const currentUser = useUserStore((s) => s.currentUser);
