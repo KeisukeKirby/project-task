@@ -7,8 +7,8 @@ export async function initSupabaseSync() {
   // 1. Initial Fetch
   const [usersRes, projectsRes, tasksRes, activitiesRes] = await Promise.all([
     supabase.from('users').select('*'),
-    supabase.from('projects').select('*').order('sort_order', { ascending: true }),
-    supabase.from('tasks').select('*').order('sort_order', { ascending: true }),
+    supabase.from('projects').select('*'),
+    supabase.from('tasks').select('*'),
     supabase.from('task_activities').select('*')
   ]);
 
@@ -21,8 +21,14 @@ export async function initSupabaseSync() {
     });
     useUserStore.setState({ users: mappedUsers });
   }
-  if (projectsRes.data) useProjectStore.setState({ projects: projectsRes.data });
-  if (tasksRes.data) useTaskStore.setState({ tasks: tasksRes.data });
+  if (projectsRes.data) {
+    const sortedProjects = [...projectsRes.data].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    useProjectStore.setState({ projects: sortedProjects });
+  }
+  if (tasksRes.data) {
+    const sortedTasks = [...tasksRes.data].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    useTaskStore.setState({ tasks: sortedTasks });
+  }
   if (activitiesRes.data) useTaskStore.setState({ taskActivities: activitiesRes.data });
 
   // 2. Setup Realtime Subscriptions

@@ -152,6 +152,19 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         setNewPostProcessName('');
       }
 
+      // Translate post processes that are just strings
+      for (let i = 0; i < finalPostProcesses.length; i++) {
+        if (typeof finalPostProcesses[i].name === 'string') {
+          const originalName = finalPostProcesses[i].name as string;
+          const translatedPp = await translateText(originalName, lang as Language);
+          finalPostProcesses[i].name = {
+            ja: translatedPp?.ja || originalName,
+            en: translatedPp?.en || originalName,
+            th: translatedPp?.th || originalName,
+          };
+        }
+      }
+
       const translatedName = await translateText(form.name, lang as Language);
       const translatedDesc = form.description.trim() ? await translateText(form.description, lang as Language) : null;
 
@@ -641,7 +654,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
             <div className="space-y-1.5">
               {formPostProcesses.map(pp => (
                 <div key={pp.id} className="flex items-center gap-2 group bg-surface-50 px-3 py-1.5 rounded-lg border border-surface-200">
-                  <span className="text-sm flex-1 text-surface-700">{pp.name}</span>
+                  <span className="text-sm flex-1 text-surface-700">{typeof pp.name === 'object' && pp.name !== null ? getMultiLangText(pp.name as MultiLangText, lang as Language) : pp.name}</span>
                   <span className="text-xs font-medium text-surface-500 bg-surface-200 px-2 py-0.5 rounded-full">{pp.days} {t('common.days') || 'days'}</span>
                   {!isReadOnly && (
                     <button

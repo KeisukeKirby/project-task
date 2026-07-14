@@ -87,7 +87,7 @@ export interface ProjectEvent {
 
 export interface PostProcess {
   id: string;
-  name: string;
+  name: MultiLangText | string;
   days: number;
 }
 

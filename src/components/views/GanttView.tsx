@@ -549,11 +549,11 @@ export function GanttView() {
                               backgroundImage: 'repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 8px, #e2e8f0 8px, #e2e8f0 16px)',
                             }}
                             onClick={() => openTaskModal(task.id)}
-                            title={`${t('task.postProcess') || 'Post Process'}: ${pp.name} (${pp.days}${t('common.days') || 'd'})`}
+                            title={`${t('task.postProcess') || 'Post Process'}: ${typeof pp.name === 'object' && pp.name !== null ? getMultiLangText(pp.name as MultiLangText, lang as Language) : pp.name} (${pp.days}${t('common.days') || 'd'})`}
                           >
                             {ppWidth > 30 && (
                               <span className="text-[10px] font-medium text-slate-700 truncate px-1 drop-shadow-sm bg-white/50 rounded px-1.5 py-0.5">
-                                {pp.name}
+                                {typeof pp.name === 'object' && pp.name !== null ? getMultiLangText(pp.name as MultiLangText, lang as Language) : pp.name}
                               </span>
                             )}
                           </div>
