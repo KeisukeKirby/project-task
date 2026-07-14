@@ -8,6 +8,58 @@ import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus, type Priority, type La
 import { X, Play, CheckCircle2, Clock, Calendar, Users, Flag, MessageSquare, CheckSquare, Plus, Trash2, AlertTriangle, FolderOpen, History } from 'lucide-react';
 import { generateId } from '@/lib/mock-data';
 import { translateText } from '@/lib/translate';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
+
+function SortablePostProcessItem({ pp, lang, isReadOnly, onDelete, t }: { pp: PostProcess, lang: Language, isReadOnly: boolean, onDelete: (id: string) => void, t: any }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: pp.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 group bg-surface-50 px-3 py-1.5 rounded-lg border border-surface-200">
+      {!isReadOnly && (
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-surface-400 hover:text-surface-600 mr-1 p-1">
+          <GripVertical className="w-4 h-4" />
+        </div>
+      )}
+      <span className="text-sm flex-1 text-surface-700">{typeof pp.name === 'object' && pp.name !== null ? getMultiLangText(pp.name as MultiLangText, lang as Language) : pp.name}</span>
+      <span className="text-xs font-medium text-surface-500 bg-surface-200 px-2 py-0.5 rounded-full">{pp.days} {t('common.days') || 'days'}</span>
+      {!isReadOnly && (
+        <button
+          onClick={() => onDelete(pp.id)}
+          className="opacity-0 group-hover:opacity-100 text-surface-400 hover:text-danger transition-all p-1"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function TaskModal({ onClose }: { onClose: () => void }) {
   const { lang, t, formatDate } = useI18n();
@@ -83,8 +135,6 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
 
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
-
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -235,6 +285,26 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
       console.error('Save failed:', error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setFormPostProcesses((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
   };
 
@@ -653,20 +723,27 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
               <Clock className="w-3 h-3" /> {t('task.postProcess') || 'Post Processes'}
             </label>
             <div className="space-y-1.5">
-              {formPostProcesses.map(pp => (
-                <div key={pp.id} className="flex items-center gap-2 group bg-surface-50 px-3 py-1.5 rounded-lg border border-surface-200">
-                  <span className="text-sm flex-1 text-surface-700">{typeof pp.name === 'object' && pp.name !== null ? getMultiLangText(pp.name as MultiLangText, lang as Language) : pp.name}</span>
-                  <span className="text-xs font-medium text-surface-500 bg-surface-200 px-2 py-0.5 rounded-full">{pp.days} {t('common.days') || 'days'}</span>
-                  {!isReadOnly && (
-                    <button
-                      onClick={() => setFormPostProcesses(prev => prev.filter(p => p.id !== pp.id))}
-                      className="opacity-0 group-hover:opacity-100 text-surface-400 hover:text-danger transition-all p-1"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+              <DndContext 
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext 
+                  items={formPostProcesses.map(p => p.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {formPostProcesses.map(pp => (
+                    <SortablePostProcessItem
+                      key={pp.id}
+                      pp={pp}
+                      lang={lang as Language}
+                      isReadOnly={isReadOnly}
+                      onDelete={(id) => setFormPostProcesses(prev => prev.filter(p => p.id !== id))}
+                      t={t}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
               {!isReadOnly && (
                 <div className="flex items-center gap-2 mt-2">
                   <input
