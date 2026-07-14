@@ -4,9 +4,10 @@ export async function translateText(text: string, currentLang: Language): Promis
   if (!text.trim()) return null;
 
   try {
-    // Do not translate the text into the current language, so that whatever the user types 
-    // (even if it's English in Japanese mode) is preserved exactly as is for their current language setting.
-    const targetLangs: Language[] = ['ja', 'en', 'th'].filter(l => l !== currentLang) as Language[];
+    // Always translate to all supported languages.
+    // This ensures that if a user types Japanese while the UI is in English mode,
+    // the English field will correctly receive the English translation.
+    const targetLangs: Language[] = ['ja', 'en', 'th'];
     
     const response = await fetch('/api/translate', {
       method: 'POST',
@@ -27,9 +28,9 @@ export async function translateText(text: string, currentLang: Language): Promis
     
     if (data.translations) {
       return {
-        ja: currentLang === 'ja' ? text : (data.translations.ja || text),
-        en: currentLang === 'en' ? text : (data.translations.en || text),
-        th: currentLang === 'th' ? text : (data.translations.th || text),
+        ja: data.translations.ja || text,
+        en: data.translations.en || text,
+        th: data.translations.th || text,
       };
     }
     
