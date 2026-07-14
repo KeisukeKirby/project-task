@@ -198,3 +198,22 @@ CREATE TABLE IF NOT EXISTS public.task_activities (
 ALTER TABLE public.task_activities ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Activities are viewable by everyone" ON public.task_activities FOR SELECT USING (true);
 CREATE POLICY "Authenticated users can insert activities" ON public.task_activities FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+- -   A d m i n   U s e r s   R L S   U p d a t e  
+ - -   T h i s   s c r i p t   a d d s   a   p o l i c y   a l l o w i n g   a d m i n s   a n d   o w n e r s   t o   u p d a t e   a n d   d e l e t e   o t h e r   u s e r s '   p r o f i l e s .  
+  
+ C R E A T E   P O L I C Y   " A d m i n s   c a n   u p d a t e   a l l   p r o f i l e s "   O N   p u b l i c . u s e r s    
+ F O R   U P D A T E   U S I N G   (  
+     E X I S T S   (  
+         S E L E C T   1   F R O M   p u b l i c . u s e r s   A S   a d m i n s  
+         W H E R E   a d m i n s . i d   =   a u t h . u i d ( )   A N D   a d m i n s . r o l e   I N   ( ' a d m i n ' ,   ' o w n e r ' )  
+     )  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " A d m i n s   c a n   d e l e t e   a l l   p r o f i l e s "   O N   p u b l i c . u s e r s    
+ F O R   D E L E T E   U S I N G   (  
+     E X I S T S   (  
+         S E L E C T   1   F R O M   p u b l i c . u s e r s   A S   a d m i n s  
+         W H E R E   a d m i n s . i d   =   a u t h . u i d ( )   A N D   a d m i n s . r o l e   I N   ( ' a d m i n ' ,   ' o w n e r ' )  
+     )  
+ ) ;  
+ 

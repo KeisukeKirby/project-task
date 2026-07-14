@@ -267,6 +267,7 @@ function createSampleData(): { projects: Project[]; tasks: Task[] } {
       { id: 'm3', project_id: proj1Id, user_id: 'user-hoshino', role: 'member', joined_at: '2024-01-01T00:00:00Z' },
     ],
     metadata: {},
+    sort_order: 0,
     created_at: daysAgo(10),
     updated_at: new Date().toISOString(),
   };
@@ -312,6 +313,7 @@ function createSampleData(): { projects: Project[]; tasks: Task[] } {
       { id: 'm6', project_id: proj2Id, user_id: 'user-beer', role: 'member', joined_at: '2024-01-01T00:00:00Z' },
     ],
     metadata: {},
+    sort_order: 0,
     created_at: daysAgo(15),
     updated_at: new Date().toISOString(),
   };
@@ -359,6 +361,7 @@ function createSampleData(): { projects: Project[]; tasks: Task[] } {
       { id: 'm9', project_id: proj3Id, user_id: 'user-beer', role: 'member', joined_at: '2024-01-01T00:00:00Z' },
     ],
     metadata: {},
+    sort_order: 0,
     created_at: daysAgo(30),
     updated_at: daysAgo(3),
   };

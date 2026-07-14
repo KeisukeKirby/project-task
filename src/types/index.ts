@@ -61,6 +61,7 @@ export interface Project {
   created_by: string;
   members: ProjectMember[];
   metadata: Record<string, unknown>;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }

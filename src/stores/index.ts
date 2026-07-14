@@ -27,6 +27,7 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
         const project: Project = {
           ...data,
           id: generateId(),
+          sort_order: get().projects.length,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -55,14 +56,25 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
       getProject: (id) => get().projects.find((p) => p.id === id),
 
       reorderProjects: (startIndex, endIndex) => {
-        set((state) => {
-          const newProjects = [...state.projects];
-          const [removed] = newProjects.splice(startIndex, 1);
-          newProjects.splice(endIndex, 0, removed);
-          return { projects: newProjects };
+        const state = get();
+        const newProjects = [...state.projects];
+        const [removed] = newProjects.splice(startIndex, 1);
+        newProjects.splice(endIndex, 0, removed);
+        
+        // Update sort_order for all projects to reflect new array order
+        const updatedProjects = newProjects.map((p, index) => ({
+          ...p,
+          sort_order: index
+        }));
+
+        set({ projects: updatedProjects });
+
+        // Sync new sort orders to Supabase
+        updatedProjects.forEach(p => {
+          supabase.from('projects').update({ sort_order: p.sort_order }).eq('id', p.id).then(({error}) => {
+            if (error) console.error(error);
+          });
         });
-        // Note: Full array ordering sync with DB would require a `sort_order` field.
-        // Assuming client-side ordering is sufficient or ordering will be updated later.
       },
     }));
 

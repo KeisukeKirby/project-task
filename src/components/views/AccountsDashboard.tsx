@@ -142,7 +142,7 @@ export function AccountsDashboard() {
       const { data, error: dbError } = await supabase.from('users').update({ email: editEmailValue, name: editNameValue, role: editRoleValue }).eq('id', userId).select();
       if (dbError) throw dbError;
       if (!data || data.length === 0) {
-        console.warn('DB update returned 0 rows. RLS might be preventing the update.');
+        throw new Error('変更が反映されませんでした。Supabaseの権限設定(RLS)を確認してください。');
       }
       
       useUserStore.setState(state => ({
