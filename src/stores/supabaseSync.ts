@@ -7,8 +7,8 @@ export async function initSupabaseSync() {
   // 1. Initial Fetch
   const [usersRes, projectsRes, tasksRes, activitiesRes] = await Promise.all([
     supabase.from('users').select('*'),
-    supabase.from('projects').select('*'),
-    supabase.from('tasks').select('*'),
+    supabase.from('projects').select('*').order('sort_order', { ascending: true }),
+    supabase.from('tasks').select('*').order('sort_order', { ascending: true }),
     supabase.from('task_activities').select('*')
   ]);
 
@@ -37,9 +37,10 @@ export async function initSupabaseSync() {
           return s;
         });
       } else if (payload.eventType === 'UPDATE') {
-        useProjectStore.setState(s => ({
-          projects: s.projects.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p)
-        }));
+        useProjectStore.setState(s => {
+          const updated = s.projects.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p);
+          return { projects: updated.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)) };
+        });
       } else if (payload.eventType === 'DELETE') {
         useProjectStore.setState(s => ({
           projects: s.projects.filter(p => p.id !== payload.old.id)
@@ -55,9 +56,10 @@ export async function initSupabaseSync() {
           return s;
         });
       } else if (payload.eventType === 'UPDATE') {
-        useTaskStore.setState(s => ({
-          tasks: s.tasks.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t)
-        }));
+        useTaskStore.setState(s => {
+          const updated = s.tasks.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t);
+          return { tasks: updated.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)) };
+        });
       } else if (payload.eventType === 'DELETE') {
         useTaskStore.setState(s => ({
           tasks: s.tasks.filter(t => t.id !== payload.old.id)
