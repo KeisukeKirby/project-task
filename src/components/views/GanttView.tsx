@@ -492,7 +492,13 @@ export function GanttView() {
 
                 // type === 'task'
                 const { task } = row;
-                const barStyle = getBarStyle(task.planned_start_date!, task.planned_end_date!);
+                
+                // Calculate main task end date excluding post processes
+                const mainTaskEndDate = new Date(task.planned_start_date!);
+                mainTaskEndDate.setDate(mainTaskEndDate.getDate() + task.estimated_lead_days - 1);
+                const mainTaskEndDateStr = mainTaskEndDate.toISOString().split('T')[0];
+                
+                const barStyle = getBarStyle(task.planned_start_date!, mainTaskEndDateStr);
                 const project = projects.find(p => p.id === task.project_id);
                 const isOverdue = task.planned_end_date && task.planned_end_date < today && task.status !== 'done';
                 const statusConf = STATUS_CONFIG[task.status];
@@ -523,6 +529,32 @@ export function GanttView() {
                         {isOverdue && <span className="absolute top-0 right-1 text-[9px] drop-shadow-sm text-yellow-300">⚠</span>}
                       </div>
                     )}
+
+                    {/* Post Processes */}
+                    {task.post_processes && task.post_processes.length > 0 && (() => {
+                      let currentLeft = barStyle.left + barStyle.width + 4;
+                      return task.post_processes.map((pp) => {
+                        const ppWidth = pp.days * dayWidth - 4;
+                        const ppLeft = currentLeft;
+                        currentLeft += ppWidth + 4;
+                        
+                        return (
+                          <div
+                            key={pp.id}
+                            className="absolute flex items-center justify-center rounded-sm border border-dashed border-surface-400 bg-surface-100/60 z-[9] overflow-hidden cursor-pointer hover:bg-surface-200 transition-colors"
+                            style={{
+                              left: ppLeft + 2,
+                              width: ppWidth,
+                              height: ROW_HEIGHT - 16,
+                            }}
+                            onClick={() => openTaskModal(task.id)}
+                            title={`後工程: ${pp.name} (${pp.days}日)`}
+                          >
+                            {ppWidth > 30 && <span className="text-[9px] text-surface-600 truncate px-1">{pp.name}</span>}
+                          </div>
+                        );
+                      });
+                    })()}
 
                     {/* Actual progress overlay */}
                     {task.actual_start_at && task.status !== 'done' && barStyle.width > 0 && (

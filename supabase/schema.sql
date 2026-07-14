@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     actual_end_at TIMESTAMP WITH TIME ZONE,
     assignees UUID[] DEFAULT '{}', -- Array of user IDs
     delay_tags TEXT[] DEFAULT '{}',
+    post_processes JSONB DEFAULT '[]'::jsonb,
     editing_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     editing_started_at TIMESTAMP WITH TIME ZONE,
     created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,

@@ -71,6 +71,10 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
       return [];
     }
   });
+
+  const [formPostProcesses, setFormPostProcesses] = useState<{ id: string, name: string, days: number }[]>(task?.post_processes || []);
+  const [newPostProcessName, setNewPostProcessName] = useState('');
+  const [newPostProcessDays, setNewPostProcessDays] = useState(1);
   
   const [newCheckItem, setNewCheckItem] = useState('');
   const [editingCheckItemId, setEditingCheckItemId] = useState<string | null>(null);
@@ -101,6 +105,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         }
         return newChecklist;
       });
+      setFormPostProcesses(task.post_processes || []);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
@@ -167,6 +172,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         assignees: form.assignees,
         dependencies: [],
         checklist: formChecklist,
+        post_processes: formPostProcesses,
         delay_tags: [],
         editing_user_id: null,
         editing_started_at: null,
@@ -184,6 +190,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         planned_start_date: form.planned_start_date,
         planned_end_date: form.planned_end_date,
         checklist: formChecklist,
+        post_processes: formPostProcesses,
       });
     }
     onClose();
@@ -268,6 +275,13 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
   };
 
   const isOverdue = task?.planned_end_date && task.planned_end_date < today && task.status !== 'done';
+
+  const handleAddPostProcess = () => {
+    if (!newPostProcessName.trim()) return;
+    setFormPostProcesses(prev => [...prev, { id: generateId(), name: newPostProcessName.trim(), days: newPostProcessDays }]);
+    setNewPostProcessName('');
+    setNewPostProcessDays(1);
+  };
 
   return (
     <div className="modal-overlay">
@@ -589,6 +603,53 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                     className="flex-1 px-3 py-1.5 rounded-lg border border-dashed border-surface-300 text-sm bg-transparent focus:outline-none focus:border-primary-400 placeholder:text-surface-300"
                   />
                   <button onClick={handleAddCheckItem} className="p-1.5 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Post Processes */}
+          <div>
+            <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> 後工程 (Post Processes)
+            </label>
+            <div className="space-y-1.5">
+              {formPostProcesses.map(pp => (
+                <div key={pp.id} className="flex items-center gap-2 group bg-surface-50 px-3 py-1.5 rounded-lg border border-surface-200">
+                  <span className="text-sm flex-1 text-surface-700">{pp.name}</span>
+                  <span className="text-xs font-medium text-surface-500 bg-surface-200 px-2 py-0.5 rounded-full">{pp.days} days</span>
+                  {!isReadOnly && (
+                    <button
+                      onClick={() => setFormPostProcesses(prev => prev.filter(p => p.id !== pp.id))}
+                      className="opacity-0 group-hover:opacity-100 text-surface-400 hover:text-danger transition-all p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {!isReadOnly && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={newPostProcessName}
+                    onChange={(e) => setNewPostProcessName(e.target.value)}
+                    placeholder="後工程名 (例: 発注・現物到着)"
+                    className="flex-1 px-3 py-1.5 rounded-lg border border-dashed border-surface-300 text-sm bg-transparent focus:outline-none focus:border-primary-400 placeholder:text-surface-300"
+                  />
+                  <div className="flex items-center gap-1 bg-surface-0 border border-surface-200 rounded-lg px-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={newPostProcessDays}
+                      onChange={(e) => setNewPostProcessDays(parseInt(e.target.value) || 1)}
+                      className="w-12 py-1.5 text-sm text-center bg-transparent focus:outline-none"
+                    />
+                    <span className="text-xs text-surface-400 pr-1">日</span>
+                  </div>
+                  <button onClick={handleAddPostProcess} className="p-1.5 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors">
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>

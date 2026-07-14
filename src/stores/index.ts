@@ -217,10 +217,13 @@ export const useTaskStore = create<TaskStore>()((set, get) => ({
         const projectTasks = get().getTasksByProject(projectId);
         const schedule = backwardSchedule(
           deadline,
-          projectTasks.map((t) => ({
-            estimated_days: t.estimated_lead_days,
-            sort_order: t.sort_order,
-          }))
+          projectTasks.map((t) => {
+            const postProcessesDays = t.post_processes?.reduce((sum, p) => sum + p.days, 0) || 0;
+            return {
+              estimated_days: t.estimated_lead_days + postProcessesDays,
+              sort_order: t.sort_order,
+            };
+          })
         );
 
         set((state) => ({

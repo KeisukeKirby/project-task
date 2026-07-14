@@ -83,6 +83,14 @@ export interface ProjectEvent {
   created_at: string;
 }
 
+// ── Post Process ──
+
+export interface PostProcess {
+  id: string;
+  name: string;
+  days: number;
+}
+
 // ── Task Template ──
 
 export interface TaskTemplate {
@@ -141,6 +149,7 @@ export interface Task {
   assignees: string[]; // user IDs
   dependencies: TaskDependency[];
   checklist: ChecklistItem[];
+  post_processes?: PostProcess[];
   delay_tags: DelayFactor[];
   editing_user_id: string | null;
   editing_started_at: string | null;
