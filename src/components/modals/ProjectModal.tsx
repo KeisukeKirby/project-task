@@ -90,6 +90,7 @@ export function ProjectModal({ onClose }: { onClose: () => void }) {
             joined_at: new Date().toISOString(),
           })),
           metadata: {},
+          sort_order: 999,
         });
 
         // Generate tasks from template

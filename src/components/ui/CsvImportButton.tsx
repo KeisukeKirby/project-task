@@ -139,8 +139,11 @@ export function CsvImportButton() {
           icon: '📁',
           template_id: null,
           created_by: currentUser?.id || '',
-          members: [],
-          metadata: {}
+          members: [
+            { id: generateId(), project_id: '', user_id: currentUser?.id || '', role: 'owner', joined_at: new Date().toISOString() }
+          ],
+          metadata: {},
+          sort_order: 999,
         });
       }
 
