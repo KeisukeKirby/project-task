@@ -88,7 +88,7 @@ export function OverviewDashboard() {
           <h2 className="text-2xl font-bold text-surface-900">
             {t('dashboard.welcomeBack', { name: currentUser?.name || '' })}
           </h2>
-          <p className="text-surface-500 text-sm mt-1">{formatDate(new Date().toISOString())} - 直近の注意事項</p>
+          <p className="text-surface-500 text-sm mt-1">{formatDate(new Date().toISOString())} - {t('dashboard.recentNotices') || 'Recent Notices'}</p>
         </div>
       </div>
 
@@ -99,10 +99,10 @@ export function OverviewDashboard() {
           <div className="bg-rose-50 p-4 border-b border-rose-100 flex items-center justify-between">
             <h3 className="font-bold text-rose-700 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
-              🚨 遅延しているタスク
+              🚨 {t('dashboard.overdueTasks') || 'Overdue Tasks'}
             </h3>
             <span className="bg-rose-100 text-rose-700 text-xs font-bold px-2 py-1 rounded-full">
-              {overdueTasks.length}件
+              {overdueTasks.length} {t('dashboard.items') || 'items'}
             </span>
           </div>
           
@@ -136,7 +136,7 @@ export function OverviewDashboard() {
                             </span>
                           )}
                           <span className="text-xs font-bold text-rose-600">
-                            {delayDays}日遅延
+                            {delayDays} {t('dashboard.daysDelayed') || 'days delayed'}
                           </span>
                         </div>
                       </div>
@@ -160,7 +160,7 @@ export function OverviewDashboard() {
             ) : (
               <div className="text-center py-8">
                 <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm text-surface-500 font-medium">遅延しているタスクはありません 🎉</p>
+                <p className="text-sm text-surface-500 font-medium">{t('dashboard.noOverdueTasks') || 'No overdue tasks 🎉'}</p>
               </div>
             )}
           </div>
@@ -171,10 +171,10 @@ export function OverviewDashboard() {
           <div className="bg-primary-50 p-4 border-b border-primary-100 flex items-center justify-between">
             <h3 className="font-bold text-primary-700 flex items-center gap-2">
               <CalendarIcon className="w-5 h-5" />
-              🗓 近日中のイベントスケジュール
+              🗓 {t('dashboard.upcomingEvents') || 'Upcoming Events'}
             </h3>
             <span className="bg-primary-100 text-primary-700 text-xs font-bold px-2 py-1 rounded-full">
-              {upcomingEvents.length}件
+              {upcomingEvents.length} {t('dashboard.items') || 'items'}
             </span>
           </div>
           

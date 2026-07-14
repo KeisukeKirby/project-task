@@ -549,7 +549,7 @@ export function GanttView() {
                               backgroundImage: 'repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 8px, #e2e8f0 8px, #e2e8f0 16px)',
                             }}
                             onClick={() => openTaskModal(task.id)}
-                            title={`後工程: ${pp.name} (${pp.days}日)`}
+                            title={`${t('task.postProcess') || 'Post Process'}: ${pp.name} (${pp.days}${t('common.days') || 'd'})`}
                           >
                             {ppWidth > 30 && (
                               <span className="text-[10px] font-medium text-slate-700 truncate px-1 drop-shadow-sm bg-white/50 rounded px-1.5 py-0.5">

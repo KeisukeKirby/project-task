@@ -636,13 +636,13 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
           {/* Post Processes */}
           <div>
             <label className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <Clock className="w-3 h-3" /> 後工程 (Post Processes)
+              <Clock className="w-3 h-3" /> {t('task.postProcess') || 'Post Processes'}
             </label>
             <div className="space-y-1.5">
               {formPostProcesses.map(pp => (
                 <div key={pp.id} className="flex items-center gap-2 group bg-surface-50 px-3 py-1.5 rounded-lg border border-surface-200">
                   <span className="text-sm flex-1 text-surface-700">{pp.name}</span>
-                  <span className="text-xs font-medium text-surface-500 bg-surface-200 px-2 py-0.5 rounded-full">{pp.days} days</span>
+                  <span className="text-xs font-medium text-surface-500 bg-surface-200 px-2 py-0.5 rounded-full">{pp.days} {t('common.days') || 'days'}</span>
                   {!isReadOnly && (
                     <button
                       onClick={() => setFormPostProcesses(prev => prev.filter(p => p.id !== pp.id))}
@@ -659,7 +659,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                     type="text"
                     value={newPostProcessName}
                     onChange={(e) => setNewPostProcessName(e.target.value)}
-                    placeholder="後工程名 (例: 発注・現物到着)"
+                    placeholder={t('task.postProcessName') || 'Post Process Name'}
                     className="flex-1 px-3 py-1.5 rounded-lg border border-dashed border-surface-300 text-sm bg-transparent focus:outline-none focus:border-primary-400 placeholder:text-surface-300"
                   />
                   <div className="flex items-center gap-1 bg-surface-0 border border-surface-200 rounded-lg px-2">
@@ -670,7 +670,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                       onChange={(e) => setNewPostProcessDays(parseInt(e.target.value) || 1)}
                       className="w-12 py-1.5 text-sm text-center bg-transparent focus:outline-none"
                     />
-                    <span className="text-xs text-surface-400 pr-1">日</span>
+                    <span className="text-xs text-surface-400 pr-1">{t('common.days') || 'days'}</span>
                   </div>
                   <button onClick={handleAddPostProcess} className="p-1.5 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors">
                     <Plus className="w-4 h-4" />
