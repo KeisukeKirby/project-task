@@ -82,6 +82,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
 
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
 
 
   const [isSaving, setIsSaving] = useState(false);
@@ -129,6 +130,28 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     setIsSaving(true);
 
     try {
+      let finalChecklist = [...formChecklist];
+      if (newCheckItem.trim()) {
+        finalChecklist.push({
+          id: generateId(),
+          task_id: task?.id || '',
+          title: newCheckItem.trim(),
+          is_completed: false,
+          sort_order: formChecklist.length,
+          due_date: null,
+          assignee_id: null,
+          completed_at: null,
+          completed_by: null,
+        });
+        setNewCheckItem('');
+      }
+
+      let finalPostProcesses = [...formPostProcesses];
+      if (newPostProcessName.trim()) {
+        finalPostProcesses.push({ id: generateId(), name: newPostProcessName.trim(), days: newPostProcessDays });
+        setNewPostProcessName('');
+      }
+
       const translatedName = await translateText(form.name, lang as Language);
       const translatedDesc = form.description.trim() ? await translateText(form.description, lang as Language) : null;
 
@@ -171,8 +194,8 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         actual_end_at: null,
         assignees: form.assignees,
         dependencies: [],
-        checklist: formChecklist,
-        post_processes: formPostProcesses,
+        checklist: finalChecklist,
+        post_processes: finalPostProcesses,
         delay_tags: [],
         editing_user_id: null,
         editing_started_at: null,
@@ -189,8 +212,8 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         estimated_lead_days: form.estimated_lead_days,
         planned_start_date: form.planned_start_date,
         planned_end_date: form.planned_end_date,
-        checklist: formChecklist,
-        post_processes: formPostProcesses,
+        checklist: finalChecklist,
+        post_processes: finalPostProcesses,
       });
     }
     onClose();
