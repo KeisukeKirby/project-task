@@ -108,8 +108,32 @@ export const useTaskStore = create<TaskStore>()((set, get) => ({
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        set((state) => ({ tasks: [...state.tasks, task] }));
+
+        const currentUser = useUserStore.getState().currentUser;
+        const newActivities: TaskActivity[] = [];
+        if (currentUser) {
+          const activity: TaskActivity = {
+            id: generateId(),
+            task_id: task.id,
+            user_id: currentUser.id,
+            field_name: 'creation',
+            old_value: null,
+            new_value: task.name,
+            created_at: new Date().toISOString()
+          };
+          newActivities.push(activity);
+        }
+
+        set((state) => ({ 
+          tasks: [...state.tasks, task],
+          taskActivities: [...state.taskActivities, ...newActivities]
+        }));
+        
         supabase.from('tasks').insert([task]).then(({error}) => { if(error) console.error(error); });
+        if (newActivities.length > 0) {
+          supabase.from('task_activities').insert(newActivities).then(({error}) => { if(error) console.error(error); });
+        }
+        
         return task;
       },
 

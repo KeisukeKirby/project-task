@@ -804,12 +804,13 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                     case 'planned_start_date': fieldLabel = t('task.startDate') || 'Start Date'; break;
                     case 'planned_end_date': fieldLabel = t('task.endDate') || 'End Date'; break;
                     case 'assignees': fieldLabel = t('task.assignees') || 'Assignees'; break;
+                    case 'creation': fieldLabel = 'タスク作成'; break;
                   }
                   
                   let oldDisplay = JSON.stringify(activity.old_value);
                   let newDisplay = JSON.stringify(activity.new_value);
                   
-                  if (activity.field_name === 'name' || activity.field_name === 'description') {
+                  if (activity.field_name === 'name' || activity.field_name === 'description' || activity.field_name === 'creation') {
                      oldDisplay = typeof activity.old_value === 'object' ? getMultiLangText(activity.old_value, lang) : activity.old_value;
                      newDisplay = typeof activity.new_value === 'object' ? getMultiLangText(activity.new_value, lang) : activity.new_value;
                   }
@@ -833,12 +834,18 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                           <span className="text-xs text-surface-400">{formatDate(activity.created_at)}</span>
                         </div>
                         <div className="text-surface-600">
-                          Updated <span className="font-semibold">{fieldLabel}</span>
-                          <div className="mt-1 flex items-center gap-2 text-xs">
-                            <span className="line-through text-surface-400 truncate max-w-[150px]" title={oldDisplay}>{oldDisplay || '(empty)'}</span>
-                            <span className="text-surface-400">→</span>
-                            <span className="font-medium text-primary-600 truncate max-w-[150px]" title={newDisplay}>{newDisplay || '(empty)'}</span>
-                          </div>
+                          {activity.field_name === 'creation' ? (
+                            <span>タスク <span className="font-semibold">{newDisplay || ''}</span> を作成しました</span>
+                          ) : (
+                            <>
+                              Updated <span className="font-semibold">{fieldLabel}</span>
+                              <div className="mt-1 flex items-center gap-2 text-xs">
+                                <span className="line-through text-surface-400 truncate max-w-[150px]" title={oldDisplay}>{oldDisplay || '(empty)'}</span>
+                                <span className="text-surface-400">→</span>
+                                <span className="font-medium text-primary-600 truncate max-w-[150px]" title={newDisplay}>{newDisplay || '(empty)'}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

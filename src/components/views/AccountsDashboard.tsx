@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useUserStore } from '@/stores';
+import { useUserStore, useTaskStore } from '@/stores';
 import { useI18n } from '@/i18n';
 import { supabase } from '@/lib/supabase';
-import { Shield, ShieldAlert, Key, UserPlus, CheckCircle2, User as UserIcon, Edit2, Check, X } from 'lucide-react';
+import { Shield, ShieldAlert, Key, UserPlus, CheckCircle2, User as UserIcon, Edit2, Check, X, History, Filter } from 'lucide-react';
 import { getAvatarColor, isAdminUser } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
@@ -12,6 +12,12 @@ export function AccountsDashboard() {
   const { t } = useI18n();
   const users = useUserStore((s) => s.users);
   const currentUser = useUserStore((s) => s.currentUser);
+  const taskActivities = useTaskStore((s) => s.taskActivities);
+  const tasks = useTaskStore((s) => s.tasks);
+  const { formatDate } = useI18n();
+  
+  const [activeTab, setActiveTab] = useState<'accounts' | 'logs'>('accounts');
+  const [logUserFilter, setLogUserFilter] = useState<string>('all');
   
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -162,13 +168,37 @@ export function AccountsDashboard() {
         <div>
           <h2 className="text-2xl font-bold text-surface-900 flex items-center gap-2">
             <Shield className="w-6 h-6 text-primary-500" />
-            アカウント管理
+            管理者メニュー
           </h2>
-          <p className="text-surface-500 text-sm mt-1">システムのアクセス権限とパスワード管理</p>
+          <p className="text-surface-500 text-sm mt-1">システムのアクセス権限と活動履歴の管理</p>
         </div>
       </div>
+      
+      <div className="flex space-x-1 border-b border-surface-200">
+        <button
+          onClick={() => setActiveTab('accounts')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'accounts' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300'
+          }`}
+        >
+          アカウント管理
+        </button>
+        <button
+          onClick={() => setActiveTab('logs')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'logs' 
+              ? 'border-primary-500 text-primary-600' 
+              : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-300'
+          }`}
+        >
+          活動履歴
+        </button>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {activeTab === 'accounts' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Create Account Form */}
         <div className="card p-5 lg:col-span-1 border-t-4 border-t-primary-500">
           <h3 className="font-bold text-surface-900 flex items-center gap-2 mb-4">
@@ -359,6 +389,102 @@ export function AccountsDashboard() {
           </div>
         </div>
       </div>
+      ) : (
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-bold text-surface-900 flex items-center gap-2">
+              <History className="w-5 h-5" />
+              アカウント別活動履歴
+            </h3>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-surface-400" />
+              <select
+                value={logUserFilter}
+                onChange={(e) => setLogUserFilter(e.target.value)}
+                className="text-sm bg-surface-50 border border-surface-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary-500 focus:outline-none"
+              >
+                <option value="all">すべてのユーザー</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {taskActivities
+              .filter(a => logUserFilter === 'all' || a.user_id === logUserFilter)
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              .slice(0, 50) // Show last 50 activities for performance
+              .map(activity => {
+                const user = users.find(u => u.id === activity.user_id);
+                const task = tasks.find(t => t.id === activity.task_id);
+                
+                let fieldLabel = activity.field_name;
+                switch(activity.field_name) {
+                  case 'name': fieldLabel = 'タスク名'; break;
+                  case 'description': fieldLabel = '説明・備考'; break;
+                  case 'status': fieldLabel = 'ステータス'; break;
+                  case 'priority': fieldLabel = '優先度'; break;
+                  case 'planned_start_date': fieldLabel = '開始予定日'; break;
+                  case 'planned_end_date': fieldLabel = '終了予定日'; break;
+                  case 'assignees': fieldLabel = '担当者'; break;
+                  case 'creation': fieldLabel = 'タスク作成'; break;
+                }
+                
+                let oldDisplay = JSON.stringify(activity.old_value);
+                let newDisplay = JSON.stringify(activity.new_value);
+                
+                if (activity.field_name === 'assignees') {
+                   oldDisplay = Array.isArray(activity.old_value) ? activity.old_value.map((id: string) => users.find(u=>u.id===id)?.name || id).join(', ') : '';
+                   newDisplay = Array.isArray(activity.new_value) ? activity.new_value.map((id: string) => users.find(u=>u.id===id)?.name || id).join(', ') : '';
+                }
+                
+                return (
+                  <div key={activity.id} className="flex gap-4 p-4 rounded-lg bg-surface-50 border border-surface-100">
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm" style={{backgroundColor: user ? getAvatarColor(user.id) : '#ccc'}}>
+                        {user ? user.name.charAt(0) : '?'}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-1">
+                        <div>
+                          <span className="font-semibold text-surface-900">{user?.name || '不明なユーザー'}</span>
+                          <span className="text-surface-500 text-sm ml-2">
+                            が「<span className="font-medium text-surface-700">{task ? (typeof task.name === 'string' ? task.name : task.name.ja) : '削除されたタスク'}</span>」を更新
+                          </span>
+                        </div>
+                        <span className="text-xs text-surface-400 whitespace-nowrap">{formatDate(activity.created_at)}</span>
+                      </div>
+                      
+                      <div className="text-sm mt-2 text-surface-600 bg-white p-3 rounded border border-surface-200">
+                        {activity.field_name === 'creation' ? (
+                          <span>タスク <span className="font-semibold">{newDisplay || ''}</span> を作成しました</span>
+                        ) : (
+                          <>
+                            <span className="font-medium text-surface-800">{fieldLabel}</span> を変更しました
+                            <div className="mt-1.5 flex items-center gap-2 text-xs">
+                              <span className="line-through text-surface-400 truncate max-w-[200px]" title={oldDisplay}>{oldDisplay || '(空)'}</span>
+                              <span className="text-surface-400">→</span>
+                              <span className="font-medium text-primary-600 truncate max-w-[200px]" title={newDisplay}>{newDisplay || '(空)'}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+            })}
+            
+            {taskActivities.length === 0 && (
+              <div className="text-center py-8 text-surface-500 text-sm">
+                活動履歴がありません
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
