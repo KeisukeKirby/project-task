@@ -4,12 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useUserStore, useProjectStore, useUIStore } from '@/stores';
 import { getAvatarColor, isAdminUser } from '@/lib/utils';
-import { Play, CheckCircle2, Clock, AlertTriangle, Calendar, ArrowUpRight, RotateCcw, User as UserIcon } from 'lucide-react';
+import { Play, CheckCircle2, Clock, AlertTriangle, Calendar, ArrowUpRight, RotateCcw, User as UserIcon, Bell, X } from 'lucide-react';
 import { STATUS_CONFIG, PRIORITY_CONFIG } from '@/types';
 
 export function MyTasksDashboard() {
   const { lang, t, formatDate } = useI18n();
   const tasks = useTaskStore((s) => s.tasks);
+  const taskActivities = useTaskStore((s) => s.taskActivities);
   const startTask = useTaskStore((s) => s.startTask);
   const completeTask = useTaskStore((s) => s.completeTask);
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -23,8 +24,24 @@ export function MyTasksDashboard() {
   useEffect(() => {
     if (currentUser?.id) {
       setTargetUserId(currentUser.id);
+      
+      const stored = localStorage.getItem(`dismissed_activities_${currentUser.id}`);
+      if (stored) {
+        try {
+          setDismissedActivityIds(JSON.parse(stored));
+        } catch(e) {}
+      }
     }
   }, [currentUser?.id]);
+
+  const [dismissedActivityIds, setDismissedActivityIds] = useState<string[]>([]);
+  
+  const dismissActivity = (id: string) => {
+    if (!currentUser) return;
+    const newDismissed = [...dismissedActivityIds, id];
+    setDismissedActivityIds(newDismissed);
+    localStorage.setItem(`dismissed_activities_${currentUser.id}`, JSON.stringify(newDismissed));
+  };
 
   if (!currentUser) return null;
 
@@ -50,6 +67,22 @@ export function MyTasksDashboard() {
   const avgLeadTime = doneTasks.filter(t => t.actual_lead_days).length > 0
     ? (doneTasks.filter(t => t.actual_lead_days).reduce((sum, t) => sum + (t.actual_lead_days || 0), 0) / doneTasks.filter(t => t.actual_lead_days).length).toFixed(1)
     : '—';
+
+  const recentChangesByOthers = taskActivities
+    .filter(a => {
+       if (dismissedActivityIds.includes(a.id)) return false;
+       if (a.user_id === targetUserId) return false;
+       
+       const task = tasks.find(t => t.id === a.task_id);
+       if (!task || !task.assignees.includes(targetUserId)) return false;
+       
+       const modifier = users.find(u => u.id === a.user_id);
+       if (!modifier || (modifier.role !== 'admin' && modifier.role !== 'owner')) return false;
+       
+       return true;
+    })
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5);
 
   const TaskCard = ({ task }: { task: typeof tasks[0] }) => {
     const project = projects.find(p => p.id === task.project_id);
@@ -185,6 +218,62 @@ export function MyTasksDashboard() {
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {/* Notifications */}
+      {recentChangesByOthers.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2 mb-3">
+            <Bell className="w-4 h-4" />
+            {lang === 'ja' ? '管理者からの更新通知' : lang === 'th' ? 'การอัปเดตจากผู้ดูแลระบบ' : 'Updates from Admins'}
+          </h3>
+          <div className="space-y-2">
+            {recentChangesByOthers.map(activity => {
+              const modifier = users.find(u => u.id === activity.user_id);
+              const task = tasks.find(t => t.id === activity.task_id);
+              
+              let fieldLabel = activity.field_name;
+              switch(activity.field_name) {
+                case 'name': fieldLabel = lang === 'ja' ? 'タスク名' : 'Name'; break;
+                case 'description': fieldLabel = lang === 'ja' ? '説明' : 'Description'; break;
+                case 'status': fieldLabel = lang === 'ja' ? 'ステータス' : 'Status'; break;
+                case 'priority': fieldLabel = lang === 'ja' ? '優先度' : 'Priority'; break;
+                case 'planned_start_date': fieldLabel = lang === 'ja' ? '開始予定' : 'Start Date'; break;
+                case 'planned_end_date': fieldLabel = lang === 'ja' ? '終了予定' : 'End Date'; break;
+                case 'assignees': fieldLabel = lang === 'ja' ? '担当者' : 'Assignees'; break;
+              }
+
+              return (
+                <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-3 rounded-lg border border-blue-100 shadow-sm gap-2">
+                  <div className="text-sm">
+                    <span className="font-medium text-surface-900">{modifier?.name}</span>
+                    <span className="text-surface-600 mx-1">{lang === 'ja' ? 'が' : ' modified '}</span>
+                    <span className="font-semibold text-primary-600 truncate inline-block max-w-[200px] align-bottom">
+                      「{task ? getMultiLangText(task.name, lang) : ''}」
+                    </span>
+                    <span className="text-surface-600 mx-1">{lang === 'ja' ? `の${fieldLabel}を更新しました` : ` (${fieldLabel})`}</span>
+                    <span className="text-xs text-surface-400 ml-1">({formatDate(activity.created_at)})</span>
+                  </div>
+                  <div className="flex gap-4 sm:gap-2 items-center justify-end">
+                    <button 
+                      onClick={() => openTaskModal(activity.task_id)} 
+                      className="text-xs text-primary-600 font-medium hover:underline bg-primary-50 px-2 py-1 rounded"
+                    >
+                      {lang === 'ja' ? '確認する' : 'View'}
+                    </button>
+                    <button 
+                      onClick={() => dismissActivity(activity.id)} 
+                      className="text-xs text-surface-400 hover:text-surface-600 p-1"
+                      title={lang === 'ja' ? '閉じる' : 'Dismiss'}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
