@@ -5,7 +5,7 @@ import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUserStore, useUIStore } from '@/stores';
 import { getAvatarColor } from '@/lib/utils';
 import { STATUS_CONFIG, PRIORITY_CONFIG, type TaskStatus } from '@/types';
-import { Clock, AlertTriangle, GripVertical, Trash2, Settings } from 'lucide-react';
+import { Clock, AlertTriangle, GripVertical, Trash2, Settings, Filter } from 'lucide-react';
 
 const KANBAN_COLUMNS: TaskStatus[] = ['todo', 'in_progress', 'review', 'revision', 'done'];
 
@@ -23,9 +23,24 @@ export function KanbanView() {
   const isMember = currentUser?.role === 'member';
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
-  const filteredTasks = selectedProjectId
-    ? tasks.filter(t => t.project_id === selectedProjectId)
-    : tasks;
+  // Filters
+  const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>(['todo', 'in_progress', 'review', 'revision', 'done']);
+  const [selectedProjects, setSelectedProjects] = React.useState<string[]>([]);
+  const [hasInitializedProjects, setHasInitializedProjects] = React.useState(false);
+
+  React.useEffect(() => {
+    if (projects.length > 0) {
+      if (selectedProjectId) {
+        setSelectedProjects([selectedProjectId]);
+      } else if (!hasInitializedProjects) {
+        setSelectedProjects(projects.map(p => p.id));
+        setHasInitializedProjects(true);
+      }
+    }
+  }, [projects, selectedProjectId, hasInitializedProjects]);
+
+  const filteredTasks = tasks.filter(t => selectedProjects.includes(t.project_id));
+  const visibleColumns = KANBAN_COLUMNS.filter(col => selectedStatuses.includes(col));
 
   const handleDrop = (taskId: string, newStatus: TaskStatus) => {
     const task = tasks.find(t => t.id === taskId);
@@ -150,9 +165,61 @@ export function KanbanView() {
         </div>
       )}
 
+      {/* Filter Section */}
+      <div className="bg-surface-0 border border-surface-200 rounded-xl p-4 shadow-sm mb-4">
+        <div className="flex items-center gap-2 text-sm font-bold text-surface-700 mb-3">
+          <Filter className="w-4 h-4" /> フィルター (Filters)
+        </div>
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Status Filter */}
+          <div className="flex-1">
+            <h4 className="text-xs font-semibold text-surface-500 mb-2 uppercase tracking-wider">タスクのステータス</h4>
+            <div className="flex flex-wrap gap-2">
+              {KANBAN_COLUMNS.map(status => (
+                <label key={status} className="flex items-center gap-1.5 px-2 py-1 bg-surface-50 border border-surface-200 rounded-lg cursor-pointer hover:bg-surface-100 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedStatuses.includes(status)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedStatuses([...selectedStatuses, status]);
+                      else setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                    }}
+                    className="rounded text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+                  />
+                  <span className="text-xs font-medium text-surface-700">{t(`status.${status}`)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          {/* Project Filter */}
+          <div className="flex-1">
+            <h4 className="text-xs font-semibold text-surface-500 mb-2 uppercase tracking-wider">プロジェクト毎</h4>
+            <div className="flex flex-wrap gap-2">
+              {projects.map(p => (
+                <label key={p.id} className="flex items-center gap-1.5 px-2 py-1 bg-surface-50 border border-surface-200 rounded-lg cursor-pointer hover:bg-surface-100 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedProjects.includes(p.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedProjects([...selectedProjects, p.id]);
+                      else setSelectedProjects(selectedProjects.filter(id => id !== p.id));
+                    }}
+                    className="rounded text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+                  />
+                  <span className="text-xs font-medium text-surface-700 max-w-[120px] truncate" title={getMultiLangText(p.name, lang)}>
+                    {getMultiLangText(p.name, lang)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Kanban Board */}
       <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-180px)]">
-        {KANBAN_COLUMNS.map((status) => {
+        {visibleColumns.map((status) => {
           const statusConf = STATUS_CONFIG[status];
           const columnTasks = filteredTasks
             .filter(t => t.status === status)

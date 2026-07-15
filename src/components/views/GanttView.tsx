@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useTaskStore, useProjectStore, useUIStore, useUserStore, useEventStore } from '@/stores';
 import { STATUS_CONFIG, Project, Task, ChecklistItem, MultiLangText, Language } from '@/types';
-import { ZoomIn, ZoomOut, Maximize2, CheckSquare, Settings } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, CheckSquare, Settings, Filter } from 'lucide-react';
 import { isHoliday, isAdminUser } from '@/lib/utils';
 
 type GanttRow = 
@@ -19,7 +19,11 @@ export function GanttView() {
   const projects = useProjectStore((s) => s.projects).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   const { openTaskModal, openProjectModal } = useUIStore();
   const users = useUserStore((s) => s.users);
-  const [localSelectedProjectId, setLocalSelectedProjectId] = useState<string | null>(null);
+  
+  // Filters
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['todo', 'in_progress', 'review', 'revision', 'done']);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>(projects.map(p => p.id));
+  
   const [dayWidth, setDayWidth] = useState(32);
   const today = new Date().toISOString().split('T')[0];
   const events = useEventStore((s) => s.events);
@@ -64,13 +68,12 @@ export function GanttView() {
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   const oneWeekAgoTime = oneWeekAgo.getTime();
 
-  const filteredTasks = (localSelectedProjectId
-    ? tasks.filter(t => t.project_id === localSelectedProjectId).sort((a, b) => a.sort_order - b.sort_order)
-    : tasks.filter(t => t.planned_start_date && t.planned_end_date).sort((a, b) => {
-        if (a.project_id !== b.project_id) return a.project_id.localeCompare(b.project_id);
-        return a.sort_order - b.sort_order;
-      })
-  ).filter(t => {
+  const filteredTasks = tasks.filter(t => t.planned_start_date && t.planned_end_date)
+    .filter(t => selectedStatuses.includes(t.status) && selectedProjects.includes(t.project_id))
+    .sort((a, b) => {
+      if (a.project_id !== b.project_id) return a.project_id.localeCompare(b.project_id);
+      return a.sort_order - b.sort_order;
+    }).filter(t => {
     if (t.status === 'done') {
       const completedDate = t.actual_end_at ? new Date(t.actual_end_at) : (t.updated_at ? new Date(t.updated_at) : null);
       if (completedDate && completedDate.getTime() < oneWeekAgoTime) {
@@ -82,9 +85,7 @@ export function GanttView() {
 
   const ganttRows = useMemo(() => {
     const rows: GanttRow[] = [];
-    const projectsToShow = localSelectedProjectId 
-      ? projects.filter(p => p.id === localSelectedProjectId)
-      : projects.filter(p => filteredTasks.some(t => t.project_id === p.id));
+    const projectsToShow = projects.filter(p => selectedProjects.includes(p.id) && filteredTasks.some(t => t.project_id === p.id));
       
     projectsToShow.forEach(project => {
       const projectTasks = filteredTasks.filter(t => t.project_id === project.id);
@@ -107,7 +108,7 @@ export function GanttView() {
     });
     
     return rows;
-  }, [filteredTasks, projects, localSelectedProjectId]);
+  }, [filteredTasks, projects, selectedProjects]);
 
   // Calculate date range
   const dateRange = useMemo(() => {
@@ -120,9 +121,7 @@ export function GanttView() {
       }
     });
 
-    const projectsToShow = localSelectedProjectId 
-      ? projects.filter(p => p.id === localSelectedProjectId)
-      : projects.filter(p => filteredTasks.some(t => t.project_id === p.id));
+    const projectsToShow = projects.filter(p => selectedProjects.includes(p.id) && filteredTasks.some(t => t.project_id === p.id));
       
     projectsToShow.forEach(project => {
       if (project.deadline_date) dates.push(project.deadline_date);
@@ -138,7 +137,7 @@ export function GanttView() {
     const start = new Date(dates[0]); start.setDate(start.getDate() - 3);
     const end = new Date(dates[dates.length - 1]); end.setDate(end.getDate() + 14);
     return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
-  }, [filteredTasks, projects, localSelectedProjectId]);
+  }, [filteredTasks, projects, selectedProjects]);
 
   const totalDays = useMemo(() => {
     const s = new Date(dateRange.start);
@@ -217,6 +216,58 @@ export function GanttView() {
         </div>
       </div>
 
+      {/* Filter Section */}
+      <div className="bg-surface-0 border border-surface-200 rounded-xl p-4 shadow-sm mb-4">
+        <div className="flex items-center gap-2 text-sm font-bold text-surface-700 mb-3">
+          <Filter className="w-4 h-4" /> フィルター (Filters)
+        </div>
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Status Filter */}
+          <div className="flex-1">
+            <h4 className="text-xs font-semibold text-surface-500 mb-2 uppercase tracking-wider">タスクのステータス</h4>
+            <div className="flex flex-wrap gap-2">
+              {['todo', 'in_progress', 'review', 'revision', 'done'].map(status => (
+                <label key={status} className="flex items-center gap-1.5 px-2 py-1 bg-surface-50 border border-surface-200 rounded-lg cursor-pointer hover:bg-surface-100 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedStatuses.includes(status)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedStatuses([...selectedStatuses, status]);
+                      else setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                    }}
+                    className="rounded text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+                  />
+                  <span className="text-xs font-medium text-surface-700">{t(`status.${status}`)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          {/* Project Filter */}
+          <div className="flex-1">
+            <h4 className="text-xs font-semibold text-surface-500 mb-2 uppercase tracking-wider">プロジェクト毎</h4>
+            <div className="flex flex-wrap gap-2">
+              {projects.map(p => (
+                <label key={p.id} className="flex items-center gap-1.5 px-2 py-1 bg-surface-50 border border-surface-200 rounded-lg cursor-pointer hover:bg-surface-100 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedProjects.includes(p.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedProjects([...selectedProjects, p.id]);
+                      else setSelectedProjects(selectedProjects.filter(id => id !== p.id));
+                    }}
+                    className="rounded text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+                  />
+                  <span className="text-xs font-medium text-surface-700 max-w-[120px] truncate" title={getMultiLangText(p.name, lang)}>
+                    {getMultiLangText(p.name, lang)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Gantt Chart */}
       <div className="flex-1 overflow-auto card">
         <div className="flex min-h-full">
@@ -226,16 +277,6 @@ export function GanttView() {
             <div className="h-[60px] border-b border-surface-200 flex flex-col justify-center px-4 gap-1 sticky top-0 bg-surface-0 z-40">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">{t('task.title')}</span>
-                <select
-                  value={localSelectedProjectId || ''}
-                  onChange={(e) => setLocalSelectedProjectId(e.target.value || null)}
-                  className="bg-surface-50 border border-surface-200 text-[10px] text-surface-700 rounded px-1.5 py-0.5 outline-none focus:border-primary-500 max-w-[140px] truncate"
-                >
-                  <option value="">{t('common.all') || 'All Projects'}</option>
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{getMultiLangText(p.name, lang)}</option>
-                  ))}
-                </select>
               </div>
             </div>
             {/* Rows */}
