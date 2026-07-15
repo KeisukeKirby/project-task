@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
 import { useProjectStore, useTaskStore, useUserStore, useUIStore, useEventStore } from '@/stores';
 import { getAvatarColor, isAdminUser } from '@/lib/utils';
-import { BarChart3, TrendingUp, AlertTriangle, CheckCircle2, Clock, FolderOpen, ArrowRight, Zap, GripVertical, Calendar as CalendarIcon, History } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, CheckCircle2, Clock, FolderOpen, ArrowRight, Zap, GripVertical, Calendar as CalendarIcon, History, Filter } from 'lucide-react';
 import { TaskActivityTimeline } from './TaskActivityTimeline';
 
 export function OverviewDashboard() {
@@ -19,17 +19,30 @@ export function OverviewDashboard() {
 
   const [draggedProjectIdx, setDraggedProjectIdx] = useState<number | null>(null);
 
-  const totalTasks = tasks.length;
-  const doneTasks = tasks.filter(t => t.status === 'done');
-  const activeTasks = tasks.filter(t => t.status === 'in_progress');
-  const overdueTasks = tasks.filter(t => {
+  // Filters
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['todo', 'in_progress', 'review', 'revision', 'done']);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>(projects.map(p => p.id));
+
+  // If projects update from the store and we haven't selected any initially, we could auto-select them.
+  // But to keep it simple, we initialize with projects.map(p => p.id) and let users change it.
+
+  // Filter tasks based on selected statuses and projects
+  const filteredTasks = tasks.filter(t => 
+    selectedStatuses.includes(t.status) && 
+    selectedProjects.includes(t.project_id)
+  );
+
+  const totalTasks = filteredTasks.length;
+  const doneTasks = filteredTasks.filter(t => t.status === 'done');
+  const activeTasks = filteredTasks.filter(t => t.status === 'in_progress');
+  const overdueTasks = filteredTasks.filter(t => {
     if (!t.planned_end_date || t.status === 'done') return false;
     return new Date(t.planned_end_date) < new Date(new Date().toISOString().split('T')[0]);
   });
   const completionRate = totalTasks > 0 ? Math.round((doneTasks.length / totalTasks) * 100) : 0;
 
   // Lead time analysis
-  const tasksWithActual = tasks.filter(t => t.actual_lead_days !== null && t.estimated_lead_days > 0);
+  const tasksWithActual = filteredTasks.filter(t => t.actual_lead_days !== null && t.estimated_lead_days > 0);
   const avgDeviation = tasksWithActual.length > 0
     ? tasksWithActual.reduce((sum, t) => sum + ((t.actual_lead_days! - t.estimated_lead_days) / t.estimated_lead_days * 100), 0) / tasksWithActual.length
     : 0;
@@ -89,6 +102,58 @@ export function OverviewDashboard() {
             {t('dashboard.welcomeBack', { name: currentUser?.name || '' })}
           </h2>
           <p className="text-surface-500 text-sm mt-1">{formatDate(new Date().toISOString())} - {t('dashboard.recentNotices') || 'Recent Notices'}</p>
+        </div>
+      </div>
+
+      {/* Filter Section */}
+      <div className="bg-surface-0 border border-surface-200 rounded-xl p-4 shadow-sm">
+        <div className="flex items-center gap-2 text-sm font-bold text-surface-700 mb-3">
+          <Filter className="w-4 h-4" /> フィルター (Filters)
+        </div>
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Status Filter */}
+          <div className="flex-1">
+            <h4 className="text-xs font-semibold text-surface-500 mb-2 uppercase tracking-wider">タスクのステータス</h4>
+            <div className="flex flex-wrap gap-2">
+              {['todo', 'in_progress', 'review', 'revision', 'done'].map(status => (
+                <label key={status} className="flex items-center gap-1.5 px-2 py-1 bg-surface-50 border border-surface-200 rounded-lg cursor-pointer hover:bg-surface-100 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedStatuses.includes(status)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedStatuses([...selectedStatuses, status]);
+                      else setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                    }}
+                    className="rounded text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+                  />
+                  <span className="text-xs font-medium text-surface-700">{t(`status.${status}`)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          {/* Project Filter */}
+          <div className="flex-1">
+            <h4 className="text-xs font-semibold text-surface-500 mb-2 uppercase tracking-wider">プロジェクト毎</h4>
+            <div className="flex flex-wrap gap-2">
+              {projects.map(p => (
+                <label key={p.id} className="flex items-center gap-1.5 px-2 py-1 bg-surface-50 border border-surface-200 rounded-lg cursor-pointer hover:bg-surface-100 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedProjects.includes(p.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedProjects([...selectedProjects, p.id]);
+                      else setSelectedProjects(selectedProjects.filter(id => id !== p.id));
+                    }}
+                    className="rounded text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+                  />
+                  <span className="text-xs font-medium text-surface-700 max-w-[120px] truncate" title={getMultiLangText(p.name, lang)}>
+                    {getMultiLangText(p.name, lang)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -271,8 +336,8 @@ export function OverviewDashboard() {
             {t('dashboard.projectProgress')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project, idx) => {
-              const projTasks = tasks.filter(t => t.project_id === project.id);
+            {projects.filter(p => selectedProjects.includes(p.id)).map((project, idx) => {
+              const projTasks = filteredTasks.filter(t => t.project_id === project.id);
               const projDone = projTasks.filter(t => t.status === 'done').length;
               const projProgress = projTasks.length > 0 ? Math.round((projDone / projTasks.length) * 100) : 0;
               const projOverdue = projTasks.filter(t => {
