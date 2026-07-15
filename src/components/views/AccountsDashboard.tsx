@@ -124,6 +124,20 @@ export function AccountsDashboard() {
     }
   };
 
+  const handleResetPassword = async (userEmail: string) => {
+    if (!confirm(`${userEmail} 宛にパスワードリセットメールを送信しますか？`)) return;
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: window.location.origin,
+      });
+      if (error) throw error;
+      alert('パスワードリセットメールを送信しました。対象のメールボックスをご確認ください。');
+    } catch (err: any) {
+      alert(err.message || 'メールの送信に失敗しました。');
+    }
+  };
+
   const startEditingUser = (userId: string, currentEmail: string, currentName: string, currentRole: UserRole) => {
     setEditingUserId(userId);
     setEditEmailValue(currentEmail);
@@ -372,6 +386,13 @@ export function AccountsDashboard() {
                           }`}>
                             {user.role}
                           </span>
+                          <span className="text-surface-300 mx-2">|</span>
+                          <button 
+                            onClick={() => handleResetPassword(user.email)}
+                            className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                          >
+                            パスワードリセット
+                          </button>
                           <span className="text-surface-300 mx-2">|</span>
                           <button 
                             onClick={() => handleDeleteUser(user.id)}
