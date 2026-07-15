@@ -494,12 +494,22 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
             <div className="flex flex-wrap gap-2">
               {users.map(user => {
                 const isAssigned = form.assignees.includes(user.id);
+                
+                let isAllowedToAssign = true;
+                if (currentUser?.role === 'member') {
+                  if (user.role !== 'member' && user.id !== currentUser.id) {
+                    isAllowedToAssign = false;
+                  }
+                }
+
                 if (!canEditAssignees && !isAssigned) return null; // Hide unassigned if can't edit
+                if (!isAllowedToAssign && !isAssigned) return null; // Hide if not allowed and not assigned
+
                 return (
                   <button
                     key={user.id}
                     onClick={() => {
-                      if (!canEditAssignees) return;
+                      if (!canEditAssignees || !isAllowedToAssign) return;
                       setForm({
                         ...form,
                         assignees: isAssigned
@@ -512,7 +522,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
                       isAssigned
                         ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-300'
                         : 'bg-surface-50 text-surface-600 hover:bg-surface-100'
-                    } ${!canEditAssignees ? 'cursor-default opacity-80' : ''}`}
+                    } ${(!canEditAssignees || !isAllowedToAssign) ? 'cursor-default opacity-80' : ''}`}
                   >
                     <div className="avatar avatar-sm" style={{ backgroundColor: getAvatarColor(user.id) }}>
                       {user.name.charAt(0)}

@@ -107,6 +107,12 @@ export function AccountsDashboard() {
   };
 
   const handleDeleteUser = async (userId: string) => {
+    const targetUser = users.find(u => u.id === userId);
+    if (targetUser?.role === 'owner') {
+      alert('オーナーのアカウントは削除できません。');
+      return;
+    }
+    
     if (!confirm('本当に削除しますか？この操作は取り消せません。')) return;
     
     try {
@@ -394,12 +400,16 @@ export function AccountsDashboard() {
                             パスワードリセット
                           </button>
                           <span className="text-surface-300 mx-2">|</span>
-                          <button 
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:underline"
-                          >
-                            削除
-                          </button>
+                          {user.role !== 'owner' ? (
+                            <button 
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:underline"
+                            >
+                              削除
+                            </button>
+                          ) : (
+                            <span className="text-xs text-surface-400 cursor-not-allowed" title="オーナーは削除できません">削除不可</span>
+                          )}
                         </>
                       )}
                     </td>
