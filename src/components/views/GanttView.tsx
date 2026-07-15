@@ -60,12 +60,25 @@ export function GanttView() {
     el.style.opacity = '1';
   };
 
-  const filteredTasks = localSelectedProjectId
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const oneWeekAgoTime = oneWeekAgo.getTime();
+
+  const filteredTasks = (localSelectedProjectId
     ? tasks.filter(t => t.project_id === localSelectedProjectId).sort((a, b) => a.sort_order - b.sort_order)
     : tasks.filter(t => t.planned_start_date && t.planned_end_date).sort((a, b) => {
         if (a.project_id !== b.project_id) return a.project_id.localeCompare(b.project_id);
         return a.sort_order - b.sort_order;
-      });
+      })
+  ).filter(t => {
+    if (t.status === 'done') {
+      const completedDate = t.actual_end_at ? new Date(t.actual_end_at) : (t.updated_at ? new Date(t.updated_at) : null);
+      if (completedDate && completedDate.getTime() < oneWeekAgoTime) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const ganttRows = useMemo(() => {
     const rows: GanttRow[] = [];
