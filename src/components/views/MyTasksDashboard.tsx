@@ -20,6 +20,7 @@ export function MyTasksDashboard() {
   const { openTaskModal } = useUIStore();
 
   const [targetUserId, setTargetUserId] = useState<string>(currentUser?.id || '');
+  const [showCompleted, setShowCompleted] = useState<boolean>(false);
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -349,6 +350,36 @@ export function MyTasksDashboard() {
           {myTasks.filter(t => t.status !== 'done').map(task => <TaskCard key={task.id} task={task} />)}
         </div>
       </div>
+
+      {/* Completed Tasks */}
+      {doneTasks.length > 0 && (
+        <div className="mt-8 pt-6 border-t border-surface-200">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-surface-900 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              {lang === 'ja' ? '完了したタスク' : lang === 'th' ? 'งานที่เสร็จสมบูรณ์' : 'Completed Tasks'} ({doneTasks.length})
+            </h3>
+            <button 
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="text-xs text-primary-600 hover:bg-primary-50 px-2 py-1 rounded transition-colors"
+            >
+              {showCompleted 
+                ? (lang === 'ja' ? '隠す' : lang === 'th' ? 'ซ่อน' : 'Hide') 
+                : (lang === 'ja' ? '表示する' : lang === 'th' ? 'แสดง' : 'Show')}
+            </button>
+          </div>
+          {showCompleted && (
+            <div className="space-y-2">
+              {doneTasks.slice().reverse().slice(0, 20).map(task => <TaskCard key={task.id} task={task} />)}
+              {doneTasks.length > 20 && (
+                <div className="text-center text-xs text-surface-400 py-2">
+                  {lang === 'ja' ? '最新の20件を表示しています' : lang === 'th' ? 'แสดง 20 รายการล่าสุด' : 'Showing latest 20 tasks'}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
