@@ -400,7 +400,7 @@ export function AccountsDashboard() {
                             パスワードリセット
                           </button>
                           <span className="text-surface-300 mx-2">|</span>
-                          {user.role !== 'owner' ? (
+                          {user.role !== 'owner' && currentUser?.role !== 'owner' ? (
                             <button 
                               onClick={() => handleDeleteUser(user.id)}
                               className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:underline"
@@ -408,7 +408,7 @@ export function AccountsDashboard() {
                               削除
                             </button>
                           ) : (
-                            <span className="text-xs text-surface-400 cursor-not-allowed" title="オーナーは削除できません">削除不可</span>
+                            <span className="text-xs text-surface-400 cursor-not-allowed" title={currentUser?.role === 'owner' ? "オーナーはアカウントを削除できません" : "オーナーは削除できません"}>削除不可</span>
                           )}
                         </>
                       )}

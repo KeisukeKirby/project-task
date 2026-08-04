@@ -22,16 +22,18 @@ export function OverviewDashboard() {
   const [draggedProjectIdx, setDraggedProjectIdx] = useState<number | null>(null);
 
   // Filters
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['todo', 'in_progress', 'review', 'revision', 'done']);
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const dashboardFilters = useUIStore((s) => s.dashboardFilters);
+  const setDashboardFilters = useUIStore((s) => s.setDashboardFilters);
+  const selectedStatuses = dashboardFilters.statuses;
+  const selectedProjects = dashboardFilters.projects;
   const [hasInitializedProjects, setHasInitializedProjects] = useState(false);
 
   useEffect(() => {
-    if (projects.length > 0 && !hasInitializedProjects) {
-      setSelectedProjects(projects.map(p => p.id));
+    if (projects.length > 0 && selectedProjects.length === 0 && !hasInitializedProjects) {
+      setDashboardFilters({ projects: projects.map(p => p.id) });
       setHasInitializedProjects(true);
     }
-  }, [projects, hasInitializedProjects]);
+  }, [projects, selectedProjects.length, hasInitializedProjects, setDashboardFilters]);
 
   const statusOptions = ['todo', 'in_progress', 'review', 'revision', 'done'].map(s => ({
     id: s,
@@ -131,14 +133,14 @@ export function OverviewDashboard() {
           title="ステータス (Status)"
           options={statusOptions}
           selectedIds={selectedStatuses}
-          onChange={setSelectedStatuses}
+          onChange={(s) => setDashboardFilters({ statuses: s })}
         />
         <FilterDropdown
           label={t('common.project') || 'プロジェクト'}
           title="プロジェクト (Projects)"
           options={projectOptions}
           selectedIds={selectedProjects}
-          onChange={setSelectedProjects}
+          onChange={(p) => setDashboardFilters({ projects: p })}
         />
       </div>
 

@@ -99,27 +99,6 @@ export function DashboardShell() {
   }, [theme]);
 
   const fetchUserProfile = async (userId: string, email?: string) => {
-    // Map mktbarefootincth@gmail.com directly to the Beer mock user without requiring a public.users row
-    if (email === 'mktbarefootincth@gmail.com') {
-      const beerUser = {
-        id: 'ae1b2de9-b7b1-424b-a42f-89766e2d016d', // Real UUID of Beer in database
-        name: 'Beer',
-        email: email,
-        role: 'member',
-        preferred_language: 'ja'
-      };
-      useUserStore.setState((state) => {
-        const exists = state.users.find(u => u.id === 'ae1b2de9-b7b1-424b-a42f-89766e2d016d');
-        if (!exists) {
-          return { users: [...state.users, beerUser as any], currentUser: beerUser as any };
-        }
-        return { currentUser: beerUser as any };
-      });
-      setShowUserSelect(false);
-      import('@/stores/supabaseSync').then((m) => m.initSupabaseSync());
-      return;
-    }
-
     const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
     if (!error && data) {
       // Create a mock users list for UI fallback if not populated
@@ -326,7 +305,7 @@ export function DashboardShell() {
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className="text-[10px] text-surface-400">{progress}%</span>
-                  {isAdminUser(currentUser) && (
+                  {(isAdminUser(currentUser) || currentUser?.role === 'member') && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -344,7 +323,7 @@ export function DashboardShell() {
         </nav>
 
         {/* Sidebar Footer */}
-        {!sidebarCollapsed && isAdminUser(currentUser) && (
+        {!sidebarCollapsed && (isAdminUser(currentUser) || currentUser?.role === 'member') && (
           <div className="p-3 border-t border-surface-100 flex-shrink-0">
             <button
               onClick={() => openProjectModal()}

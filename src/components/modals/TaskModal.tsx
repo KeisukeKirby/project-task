@@ -93,8 +93,8 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
     } catch { return false; }
   })());
   
-  // Members cannot edit assignees (always themselves)
-  const canEditAssignees = !isViewer && !isMember;
+  // Members can edit assignees, but their choices are restricted below
+  const canEditAssignees = !isViewer;
 
   const [form, setForm] = useState({
     name: task?.name ? (typeof task.name === 'string' ? task.name : getMultiLangText(task.name as any, lang)) : '',
@@ -270,6 +270,7 @@ export function TaskModal({ onClose }: { onClose: () => void }) {
         name: nameField,
         description: descField,
         status: form.status,
+        actual_end_at: form.status === 'done' ? (task.actual_end_at || new Date().toISOString()) : null,
         priority: form.priority,
         project_id: form.project_id,
         assignees: form.assignees,

@@ -22,16 +22,18 @@ export function GanttView() {
   const users = useUserStore((s) => s.users);
   
   // Filters
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['todo', 'in_progress', 'review', 'revision', 'done']);
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const dashboardFilters = useUIStore((s) => s.dashboardFilters);
+  const setDashboardFilters = useUIStore((s) => s.setDashboardFilters);
+  const selectedStatuses = dashboardFilters.statuses;
+  const selectedProjects = dashboardFilters.projects;
   const [hasInitializedProjects, setHasInitializedProjects] = useState(false);
 
   useEffect(() => {
-    if (projects.length > 0 && !hasInitializedProjects) {
-      setSelectedProjects(projects.map(p => p.id));
+    if (projects.length > 0 && selectedProjects.length === 0 && !hasInitializedProjects) {
+      setDashboardFilters({ projects: projects.map(p => p.id) });
       setHasInitializedProjects(true);
     }
-  }, [projects, hasInitializedProjects]);
+  }, [projects, selectedProjects.length, hasInitializedProjects, setDashboardFilters]);
 
   const statusOptions = ['todo', 'in_progress', 'review', 'revision', 'done'].map(s => ({
     id: s,
@@ -148,15 +150,24 @@ export function GanttView() {
       if (project.deadline_date) dates.push(project.deadline_date);
     });
     
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - 7);
+    
     if (dates.length === 0) {
-      const now = new Date();
-      const start = new Date(now); start.setDate(start.getDate() - 7);
       const end = new Date(now); end.setDate(end.getDate() + 30);
       return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
     }
+    
     dates.sort();
-    const start = new Date(dates[0]); start.setDate(start.getDate() - 3);
-    const end = new Date(dates[dates.length - 1]); end.setDate(end.getDate() + 14);
+    let end = new Date(dates[dates.length - 1]); 
+    end.setDate(end.getDate() + 14);
+    
+    // Ensure end date is at least somewhat in the future
+    const minEnd = new Date(now);
+    minEnd.setDate(minEnd.getDate() + 14);
+    if (end < minEnd) end = minEnd;
+
     return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
   }, [filteredTasks, projects, selectedProjects]);
 
@@ -244,14 +255,14 @@ export function GanttView() {
           title="ステータス (Status)"
           options={statusOptions}
           selectedIds={selectedStatuses}
-          onChange={setSelectedStatuses}
+          onChange={(s) => setDashboardFilters({ statuses: s })}
         />
         <FilterDropdown
           label={t('common.project') || 'プロジェクト'}
           title="プロジェクト (Projects)"
           options={projectOptions}
           selectedIds={selectedProjects}
-          onChange={setSelectedProjects}
+          onChange={(p) => setDashboardFilters({ projects: p })}
         />
       </div>
 
@@ -283,7 +294,7 @@ export function GanttView() {
                   >
                     <span className="text-sm font-bold text-surface-900 truncate flex-1 flex items-center gap-2 pointer-events-none">
                       {getMultiLangText(row.project.name, lang)}
-                      {isAdmin && (
+                      {(isAdmin || currentUser?.role === 'member') && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openProjectModal(row.project.id); }}
                           className="p-1 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors pointer-events-auto"

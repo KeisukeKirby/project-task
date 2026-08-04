@@ -129,9 +129,18 @@ export const useTaskStore = create<TaskStore>()((set, get) => ({
           taskActivities: [...state.taskActivities, ...newActivities]
         }));
         
-        supabase.from('tasks').insert([task]).then(({error}) => { if(error) console.error(error); });
+        supabase.from('tasks').insert([task]).then(({error}) => { 
+          if(error) {
+            console.error('Task insert error:', error);
+            alert('タスクの保存に失敗しました: ' + error.message);
+            // Optionally rollback the local state
+            set((s) => ({ tasks: s.tasks.filter(t => t.id !== task.id) }));
+          } 
+        });
         if (newActivities.length > 0) {
-          supabase.from('task_activities').insert(newActivities).then(({error}) => { if(error) console.error(error); });
+          supabase.from('task_activities').insert(newActivities).then(({error}) => { 
+            if(error) console.error('Activity insert error:', error); 
+          });
         }
         
         return task;
@@ -374,13 +383,18 @@ interface UIStore {
   projectModalOpen: boolean;
   projectModalId: string | null;
   openProjectModal: (id?: string) => void;
-  closeProjectModal: () => void;
-  eventModalOpen: boolean;
-  eventModalDate: string | null;
-  eventModalEventId: string | null;
-  openEventModal: (date: string, eventId?: string) => void;
-  closeEventModal: () => void;
-}
+      closeProjectModal: () => void;
+      eventModalOpen: boolean;
+      eventModalDate: string | null;
+      eventModalEventId: string | null;
+      openEventModal: (date: string, eventId?: string) => void;
+      closeEventModal: () => void;
+      dashboardFilters: {
+        statuses: string[];
+        projects: string[];
+      };
+      setDashboardFilters: (filters: Partial<{ statuses: string[]; projects: string[] }>) => void;
+    }
 
 const defaultFilters: ViewFilters = {
   search: '',
@@ -418,6 +432,8 @@ export const useUIStore = create<UIStore>()(
       eventModalEventId: null,
       openEventModal: (date: string, eventId?: string) => set({ eventModalOpen: true, eventModalDate: date, eventModalEventId: eventId || null }),
       closeEventModal: () => set({ eventModalOpen: false, eventModalDate: null, eventModalEventId: null }),
+      dashboardFilters: { statuses: ['todo', 'in_progress', 'review', 'revision', 'done'], projects: [] },
+      setDashboardFilters: (filters) => set((state) => ({ dashboardFilters: { ...state.dashboardFilters, ...filters } })),
     }),
     { 
       name: 'projecthub-ui',

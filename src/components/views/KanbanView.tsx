@@ -25,20 +25,22 @@ export function KanbanView() {
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
   // Filters
-  const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>(['todo', 'in_progress', 'review', 'revision', 'done']);
-  const [selectedProjects, setSelectedProjects] = React.useState<string[]>([]);
+  const dashboardFilters = useUIStore((s) => s.dashboardFilters);
+  const setDashboardFilters = useUIStore((s) => s.setDashboardFilters);
+  const selectedStatuses = dashboardFilters.statuses;
+  const selectedProjects = dashboardFilters.projects;
   const [hasInitializedProjects, setHasInitializedProjects] = React.useState(false);
 
   React.useEffect(() => {
     if (projects.length > 0) {
-      if (selectedProjectId) {
-        setSelectedProjects([selectedProjectId]);
-      } else if (!hasInitializedProjects) {
-        setSelectedProjects(projects.map(p => p.id));
+      if (selectedProjectId && selectedProjects.length === 0 && !hasInitializedProjects) {
+        setDashboardFilters({ projects: [selectedProjectId] });
+      } else if (selectedProjects.length === 0 && !hasInitializedProjects) {
+        setDashboardFilters({ projects: projects.map(p => p.id) });
         setHasInitializedProjects(true);
       }
     }
-  }, [projects, selectedProjectId, hasInitializedProjects]);
+  }, [projects, selectedProjectId, selectedProjects.length, hasInitializedProjects, setDashboardFilters]);
 
   const statusOptions = KANBAN_COLUMNS.map(s => ({
     id: s,
@@ -142,7 +144,7 @@ export function KanbanView() {
                     >
                       {getMultiLangText(proj.name, lang)}
                     </h2>
-                    {isAdmin && (
+                    {(isAdmin || isMember) && (
                       <button
                         onClick={() => openProjectModal(proj.id)}
                         className="p-1.5 text-surface-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
@@ -185,14 +187,14 @@ export function KanbanView() {
           title="ステータス (Status)"
           options={statusOptions}
           selectedIds={selectedStatuses}
-          onChange={setSelectedStatuses}
+          onChange={(s) => setDashboardFilters({ statuses: s })}
         />
         <FilterDropdown
           label={t('common.project') || 'プロジェクト'}
           title="プロジェクト (Projects)"
           options={projectOptions}
           selectedIds={selectedProjects}
-          onChange={setSelectedProjects}
+          onChange={(p) => setDashboardFilters({ projects: p })}
         />
       </div>
 
