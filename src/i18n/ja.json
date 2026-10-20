@@ -15,7 +15,10 @@
     "projects": "プロジェクト",
     "quickAccess": "クイックアクセス",
     "overdue": "期限超過",
-    "dueSoon": "締切間近"
+    "dueSoon": "締切間近",
+    "views": "表示",
+    "adminMenu": "管理者メニュー",
+    "accounts": "アカウント管理"
   },
   "common": {
     "save": "保存",
@@ -45,7 +48,10 @@
     "thisWeek": "今週",
     "days": "日",
     "hours": "時間",
-    "minutes": "分"
+    "minutes": "分",
+    "status": "ステータス",
+    "project": "プロジェクト",
+    "confirmDelete": "本当に削除しますか？"
   },
   "auth": {
     "login": "ログイン",
@@ -53,7 +59,17 @@
     "email": "メールアドレス",
     "password": "パスワード",
     "loginTitle": "ProjectHub にログイン",
-    "selectUser": "ユーザーを選択"
+    "selectUser": "ユーザーを選択",
+    "whoAreYou": "あなたの名前を選んでください",
+    "whoAreYouHint": "名前をタップするだけで使えます。パスワードは不要です。次回からはこの画面は表示されません。",
+    "addMyName": "自分の名前がない（新しく追加）",
+    "yourName": "あなたの名前",
+    "yourNamePlaceholder": "例：田中 太郎",
+    "startUsing": "この名前で始める",
+    "backToList": "戻る",
+    "switchUser": "名前を切り替える",
+    "addFailed": "名前を追加できませんでした。管理者に連絡してください。",
+    "viewingAs": "{name} として利用中"
   },
   "project": {
     "title": "プロジェクト",
@@ -179,7 +195,11 @@
     "overdue": "期限を過ぎています",
     "assigned": "タスクがアサインされました",
     "revision": "差し戻しがあります",
-    "comment": "新しいコメントがあります"
+    "comment": "新しいコメントがあります",
+    "title": "通知",
+    "none": "新しい通知はありません",
+    "count": "{count}件",
+    "overduePrefix": "期限超過"
   },
   "delay": {
     "client": "クライアント都合",
@@ -187,5 +207,15 @@
     "spec_change": "仕様変更",
     "review_delay": "レビュー遅延",
     "other": "その他"
+  },
+  "role": {
+    "admin": "管理者",
+    "owner": "オーナー",
+    "member": "メンバー",
+    "viewer": "閲覧者"
+  },
+  "notice": {
+    "saveFailed": "保存できませんでした。インターネット接続と Supabase の設定を確認してください。",
+    "dismiss": "閉じる"
   }
 }

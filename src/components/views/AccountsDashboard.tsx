@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useUserStore, useTaskStore } from '@/stores';
 import { useI18n } from '@/i18n';
 import { supabase } from '@/lib/supabase';
-import { Shield, ShieldAlert, Key, UserPlus, CheckCircle2, User as UserIcon, Edit2, Check, X, History, Filter } from 'lucide-react';
+import { Shield, ShieldAlert, UserPlus, CheckCircle2, User as UserIcon, Edit2, Check, X, History, Filter } from 'lucide-react';
 import { getAvatarColor, isAdminUser } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
@@ -19,9 +19,7 @@ export function AccountsDashboard() {
   const [activeTab, setActiveTab] = useState<'accounts' | 'logs'>('accounts');
   const [logUserFilter, setLogUserFilter] = useState<string>('all');
   
-  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('member');
   const [isCreating, setIsCreating] = useState(false);
   const [message, setMessage] = useState('');
@@ -43,46 +41,45 @@ export function AccountsDashboard() {
     );
   }
 
+  // ログイン無し運用: アカウントは「名前と権限」だけ。メール・パスワードは使わない。
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
-    
-    if (!email || !name || !password) {
-      setError('すべてのフィールドを入力してください。');
+
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError('名前を入力してください。');
+      return;
+    }
+    if (users.some(u => u.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+      setError('同じ名前のアカウントがすでにあります。');
       return;
     }
 
     setIsCreating(true);
-    
+
     try {
-      // Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const id = crypto.randomUUID();
+      const newUser = {
+        id,
+        email: `virtual-${id}@local.dev`,
+        name: trimmed,
+        role,
+        preferred_language: 'ja',
+        max_concurrent_tasks: 5,
+      };
+      const { error: dbError } = await supabase.from('users').insert([newUser]);
+      if (dbError) throw dbError;
 
-      if (authError) throw authError;
+      useUserStore.setState(state => (
+        state.users.some(u => u.id === id)
+          ? state
+          : { users: [...state.users, { ...newUser, avatar_url: '', team: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any] }
+      ));
 
-      // Add to public.users table (if not automatically created by triggers)
-      if (authData.user) {
-        const { error: dbError } = await supabase.from('users').insert([{
-          id: authData.user.id,
-          email,
-          name,
-          role,
-          preferred_language: 'ja'
-        }]);
-
-        if (dbError) throw dbError;
-
-        setMessage('アカウントが正常に作成されました。');
-        setEmail('');
-        setName('');
-        setPassword('');
-        
-        // Refresh users store (normally handled by realtime sync)
-      }
+      setMessage('アカウントを追加しました。「名前を選ぶ」画面に表示されます。');
+      setName('');
     } catch (err: any) {
       setError(err.message || 'アカウント作成中にエラーが発生しました。');
     } finally {
@@ -130,23 +127,9 @@ export function AccountsDashboard() {
     }
   };
 
-  const handleResetPassword = async (userEmail: string) => {
-    if (!confirm(`${userEmail} 宛にパスワードリセットメールを送信しますか？`)) return;
-    
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: window.location.origin,
-      });
-      if (error) throw error;
-      alert('パスワードリセットメールを送信しました。対象のメールボックスをご確認ください。');
-    } catch (err: any) {
-      alert(err.message || 'メールの送信に失敗しました。');
-    }
-  };
-
   const startEditingUser = (userId: string, currentEmail: string, currentName: string, currentRole: UserRole) => {
     setEditingUserId(userId);
-    setEditEmailValue(currentEmail);
+    setEditEmailValue(currentEmail.startsWith('virtual-') ? '' : currentEmail);
     setEditNameValue(currentName);
     setEditRoleValue(currentRole);
   };
@@ -158,21 +141,23 @@ export function AccountsDashboard() {
   };
 
   const handleUpdateUser = async (userId: string) => {
-    if (!editEmailValue.trim() || !editNameValue.trim()) return;
+    if (!editNameValue.trim()) return;
+    const existing = users.find(u => u.id === userId);
+    const emailToSave = editEmailValue.trim() || existing?.email || `virtual-${userId}@local.dev`;
     if (!confirm('ユーザー情報を変更してよろしいですか？')) {
       cancelEditingUser();
       return;
     }
     
     try {
-      const { data, error: dbError } = await supabase.from('users').update({ email: editEmailValue, name: editNameValue, role: editRoleValue }).eq('id', userId).select();
+      const { data, error: dbError } = await supabase.from('users').update({ email: emailToSave, name: editNameValue.trim(), role: editRoleValue }).eq('id', userId).select();
       if (dbError) throw dbError;
       if (!data || data.length === 0) {
         throw new Error('変更が反映されませんでした。Supabaseの権限設定(RLS)を確認してください。');
       }
       
       useUserStore.setState(state => ({
-        users: state.users.map(u => u.id === userId ? { ...u, email: editEmailValue, name: editNameValue, role: editRoleValue } : u)
+        users: state.users.map(u => u.id === userId ? { ...u, email: emailToSave, name: editNameValue.trim(), role: editRoleValue } : u)
       }));
       alert('ユーザー情報を変更しました。');
     } catch (err: any) {
@@ -190,7 +175,7 @@ export function AccountsDashboard() {
             <Shield className="w-6 h-6 text-primary-500" />
             管理者メニュー
           </h2>
-          <p className="text-surface-500 text-sm mt-1">システムのアクセス権限と活動履歴の管理</p>
+          <p className="text-surface-500 text-sm mt-1">メンバーの名前・権限と活動履歴の管理（ログイン不要。名前を選ぶだけで使えます）</p>
         </div>
       </div>
       
@@ -223,21 +208,10 @@ export function AccountsDashboard() {
         <div className="card p-5 lg:col-span-1 border-t-4 border-t-primary-500">
           <h3 className="font-bold text-surface-900 flex items-center gap-2 mb-4">
             <UserPlus className="w-5 h-5" />
-            新規アカウント作成
+            メンバーを追加
           </h3>
           
           <form onSubmit={handleCreateAccount} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-surface-700 mb-1">メールアドレス</label>
-              <input 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-surface-50 border border-surface-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
-                placeholder="email@example.com"
-              />
-            </div>
-            
             <div>
               <label className="block text-xs font-semibold text-surface-700 mb-1">名前</label>
               <input 
@@ -249,20 +223,6 @@ export function AccountsDashboard() {
               />
             </div>
             
-            <div>
-              <label className="block text-xs font-semibold text-surface-700 mb-1">初期パスワード</label>
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-surface-50 border border-surface-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
-                  placeholder="6文字以上"
-                />
-              </div>
-            </div>
-
             <div>
               <label className="block text-xs font-semibold text-surface-700 mb-1">権限 (Role)</label>
               <select 
@@ -285,7 +245,7 @@ export function AccountsDashboard() {
               disabled={isCreating}
               className="w-full bg-primary-600 text-white font-medium py-2 rounded-lg text-sm hover:bg-primary-700 transition-colors disabled:opacity-50"
             >
-              {isCreating ? '作成中...' : 'アカウントを作成'}
+              {isCreating ? '追加中...' : 'メンバーを追加'}
             </button>
           </form>
         </div>
@@ -294,7 +254,7 @@ export function AccountsDashboard() {
         <div className="card p-5 lg:col-span-2">
           <h3 className="font-bold text-surface-900 flex items-center gap-2 mb-4">
             <UserIcon className="w-5 h-5" />
-            登録済みアカウント一覧
+            メンバー一覧
           </h3>
           
           <div className="overflow-x-auto">
@@ -302,7 +262,7 @@ export function AccountsDashboard() {
               <thead>
                 <tr className="border-b border-surface-200">
                   <th className="pb-3 text-xs font-semibold text-surface-500">ユーザー</th>
-                  <th className="pb-3 text-xs font-semibold text-surface-500">メールアドレス</th>
+                  <th className="pb-3 text-xs font-semibold text-surface-500">メールアドレス（任意）</th>
                   <th className="pb-3 text-xs font-semibold text-surface-500">権限</th>
                   <th className="pb-3 text-xs font-semibold text-surface-500">アクション</th>
                 </tr>
@@ -356,7 +316,7 @@ export function AccountsDashboard() {
                           />
                         </div>
                       ) : (
-                        <span>{user.email}</span>
+                        <span>{user.email.startsWith('virtual-') ? <span className="text-surface-300">—</span> : user.email}</span>
                       )}
                     </td>
                     <td className="py-3">
@@ -392,13 +352,6 @@ export function AccountsDashboard() {
                           }`}>
                             {user.role}
                           </span>
-                          <span className="text-surface-300 mx-2">|</span>
-                          <button 
-                            onClick={() => handleResetPassword(user.email)}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                          >
-                            パスワードリセット
-                          </button>
                           <span className="text-surface-300 mx-2">|</span>
                           {user.role !== 'owner' && currentUser?.role !== 'owner' ? (
                             <button 

@@ -9,6 +9,13 @@ import { persist } from 'zustand/middleware';
 import type { Project, Task, TaskTemplate, User, TaskStatus, ViewMode, ViewFilters, Language, TaskActivity } from '@/types';
 import { MOCK_USERS, MOCK_TEMPLATES, SAMPLE_DATA, generateId, generateTasksFromTemplate, backwardSchedule } from '@/lib/mock-data';
 
+// ── Save error reporting ──
+// Supabase への保存に失敗したときに、console だけでなく画面上の通知にも出す。
+export function reportSaveError(detail?: string) {
+  console.error('Supabase save failed:', detail);
+  useUIStore.getState().setNotice({ kind: 'error', message: 'saveFailed', detail });
+}
+
 // ── Project Store ──
 
 interface ProjectStore {
@@ -32,7 +39,7 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
           updated_at: new Date().toISOString(),
         };
         set((state) => ({ projects: [...state.projects, project] }));
-        supabase.from('projects').insert([project]).then(({error}) => { if(error) console.error(error); });
+        supabase.from('projects').insert([project]).then(({error}) => { if(error) reportSaveError(error.message); });
         return project;
       },
 
@@ -42,7 +49,7 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
             p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p
           ),
         }));
-        supabase.from('projects').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({error}) => { if(error) console.error(error); });
+        supabase.from('projects').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({error}) => { if(error) reportSaveError(error.message); });
       },
 
       deleteProject: (id) => {
@@ -50,7 +57,7 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
           projects: state.projects.filter((p) => p.id !== id),
         }));
         useTaskStore.getState().deleteTasksByProject(id);
-        supabase.from('projects').delete().eq('id', id).then(({error}) => { if(error) console.error(error); });
+        supabase.from('projects').delete().eq('id', id).then(({error}) => { if(error) reportSaveError(error.message); });
       },
 
       getProject: (id) => get().projects.find((p) => p.id === id),
@@ -72,7 +79,7 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
         // Sync new sort orders to Supabase
         updatedProjects.forEach(p => {
           supabase.from('projects').update({ sort_order: p.sort_order }).eq('id', p.id).then(({error}) => {
-            if (error) console.error(error);
+            if (error) reportSaveError(error.message);
           });
         });
       },
@@ -132,7 +139,7 @@ export const useTaskStore = create<TaskStore>()((set, get) => ({
         supabase.from('tasks').insert([task]).then(({error}) => { 
           if(error) {
             console.error('Task insert error:', error);
-            alert('タスクの保存に失敗しました: ' + error.message);
+            reportSaveError(error.message);
             // Optionally rollback the local state
             set((s) => ({ tasks: s.tasks.filter(t => t.id !== task.id) }));
           } 
@@ -181,21 +188,21 @@ export const useTaskStore = create<TaskStore>()((set, get) => ({
           taskActivities: [...state.taskActivities, ...newActivities]
         }));
         
-        supabase.from('tasks').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({error}) => { if(error) console.error(error); });
+        supabase.from('tasks').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({error}) => { if(error) reportSaveError(error.message); });
         
         if (newActivities.length > 0) {
-          supabase.from('task_activities').insert(newActivities).then(({error}) => { if(error) console.error(error); });
+          supabase.from('task_activities').insert(newActivities).then(({error}) => { if(error) reportSaveError(error.message); });
         }
       },
 
       deleteTask: (id) => {
         set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
-        supabase.from('tasks').delete().eq('id', id).then(({error}) => { if(error) console.error(error); });
+        supabase.from('tasks').delete().eq('id', id).then(({error}) => { if(error) reportSaveError(error.message); });
       },
 
       deleteTasksByProject: (projectId) => {
         set((state) => ({ tasks: state.tasks.filter((t) => t.project_id !== projectId) }));
-        supabase.from('tasks').delete().eq('project_id', projectId).then(({error}) => { if(error) console.error(error); });
+        supabase.from('tasks').delete().eq('project_id', projectId).then(({error}) => { if(error) reportSaveError(error.message); });
       },
 
       getTask: (id) => get().tasks.find((t) => t.id === id),
@@ -308,11 +315,34 @@ export const useTemplateStore = create<TemplateStore>()(
 );
 
 // ── User Store ──
+// ログイン画面は無し。「自分の名前」を選ぶだけで、選択はブラウザに記憶される。
+
+const CURRENT_USER_KEY = 'projecthub_user_id';
+
+export function getRememberedUserId(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(CURRENT_USER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberUserId(userId: string | null) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (userId) localStorage.setItem(CURRENT_USER_KEY, userId);
+    else localStorage.removeItem(CURRENT_USER_KEY);
+  } catch {
+    /* localStorage が使えない環境では記憶しない */
+  }
+}
 
 interface UserStore {
   users: User[];
   currentUser: User | null;
   setCurrentUser: (userId: string) => void;
+  clearCurrentUser: () => void;
   getUser: (id: string) => User | undefined;
   addManualUser: (name: string) => Promise<User | null>;
 }
@@ -323,6 +353,11 @@ export const useUserStore = create<UserStore>()((set, get) => ({
       setCurrentUser: (userId) => {
         const user = get().users.find((u) => u.id === userId) || null;
         set({ currentUser: user });
+        rememberUserId(user ? user.id : null);
+      },
+      clearCurrentUser: () => {
+        set({ currentUser: null });
+        rememberUserId(null);
       },
       getUser: (id) => get().users.find((u) => u.id === id),
       addManualUser: async (name) => {
@@ -355,6 +390,8 @@ export const useUserStore = create<UserStore>()((set, get) => ({
         
         if (error) {
           console.error('Failed to insert virtual user:', error);
+          set((state) => ({ users: state.users.filter((u) => u.id !== id) }));
+          reportSaveError(error.message);
           return null;
         }
         
@@ -394,6 +431,8 @@ interface UIStore {
         projects: string[];
       };
       setDashboardFilters: (filters: Partial<{ statuses: string[]; projects: string[] }>) => void;
+      notice: { kind: 'error' | 'info'; message: string; detail?: string } | null;
+      setNotice: (notice: { kind: 'error' | 'info'; message: string; detail?: string } | null) => void;
     }
 
 const defaultFilters: ViewFilters = {
@@ -434,6 +473,8 @@ export const useUIStore = create<UIStore>()(
       closeEventModal: () => set({ eventModalOpen: false, eventModalDate: null, eventModalEventId: null }),
       dashboardFilters: { statuses: ['todo', 'in_progress', 'review', 'revision', 'done'], projects: [] },
       setDashboardFilters: (filters) => set((state) => ({ dashboardFilters: { ...state.dashboardFilters, ...filters } })),
+      notice: null,
+      setNotice: (notice) => set({ notice }),
     }),
     { 
       name: 'projecthub-ui',

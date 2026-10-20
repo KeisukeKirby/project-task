@@ -15,7 +15,10 @@
     "projects": "Projects",
     "quickAccess": "Quick Access",
     "overdue": "Overdue",
-    "dueSoon": "Due Soon"
+    "dueSoon": "Due Soon",
+    "views": "Views",
+    "adminMenu": "Admin",
+    "accounts": "Accounts"
   },
   "common": {
     "save": "Save",
@@ -45,7 +48,10 @@
     "thisWeek": "This Week",
     "days": "days",
     "hours": "hours",
-    "minutes": "min"
+    "minutes": "min",
+    "status": "Status",
+    "project": "Project",
+    "confirmDelete": "Are you sure you want to delete this?"
   },
   "auth": {
     "login": "Login",
@@ -53,7 +59,17 @@
     "email": "Email",
     "password": "Password",
     "loginTitle": "Sign in to ProjectHub",
-    "selectUser": "Select User"
+    "selectUser": "Select User",
+    "whoAreYou": "Who are you?",
+    "whoAreYouHint": "Just tap your name to start. No password needed. You won't see this screen next time.",
+    "addMyName": "My name is not listed (add it)",
+    "yourName": "Your name",
+    "yourNamePlaceholder": "e.g. Taro Tanaka",
+    "startUsing": "Start with this name",
+    "backToList": "Back",
+    "switchUser": "Switch name",
+    "addFailed": "Could not add the name. Please contact an admin.",
+    "viewingAs": "Using as {name}"
   },
   "project": {
     "title": "Projects",
@@ -179,7 +195,11 @@
     "overdue": "Task is overdue",
     "assigned": "You've been assigned a task",
     "revision": "Task has been sent back for revision",
-    "comment": "New comment on your task"
+    "comment": "New comment on your task",
+    "title": "Notifications",
+    "none": "No new notifications",
+    "count": "{count}",
+    "overduePrefix": "Overdue"
   },
   "delay": {
     "client": "Client Request",
@@ -187,5 +207,15 @@
     "spec_change": "Spec Change",
     "review_delay": "Review Delay",
     "other": "Other"
+  },
+  "role": {
+    "admin": "Admin",
+    "owner": "Owner",
+    "member": "Member",
+    "viewer": "Viewer"
+  },
+  "notice": {
+    "saveFailed": "Could not save. Check your internet connection and the Supabase settings.",
+    "dismiss": "Dismiss"
   }
 }

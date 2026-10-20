@@ -2,15 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useI18n, getMultiLangText } from '@/i18n';
-import { useUIStore, useUserStore, useProjectStore, useTaskStore } from '@/stores';
-import type { Language, ViewMode, User } from '@/types';
+import { useUIStore, useUserStore, useProjectStore, useTaskStore, getRememberedUserId } from '@/stores';
+import type { Language, ViewMode } from '@/types';
 import { getAvatarColor, isAdminUser } from '@/lib/utils';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard, ListTodo, Columns3, BarChart3, Calendar,
-  FileText, Settings, Settings as SettingsIcon, ChevronLeft, Menu, Plus, Search,
-  AlertCircle, Clock, FolderOpen, LogOut, Bell, Sun, Moon
+  Settings, Settings as SettingsIcon, ChevronLeft, Menu, Plus,
+  AlertCircle, Clock, Bell, Sun, Moon, UserRound, X, AlertTriangle
 } from 'lucide-react';
 import { OverviewDashboard } from '@/components/views/OverviewDashboard';
 import { MyTasksDashboard } from '@/components/views/MyTasksDashboard';
@@ -46,43 +45,44 @@ export function DashboardShell() {
     theme, setTheme,
   } = useUIStore();
   const { currentUser, setCurrentUser } = useUserStore();
+  const notice = useUIStore((s) => s.notice);
+  const setNotice = useUIStore((s) => s.setNotice);
   const projects = useProjectStore((s) => s.projects).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   const tasks = useTaskStore((s) => s.tasks);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [showUserSelect, setShowUserSelect] = useState(true);
+  const [showUserSelect, setShowUserSelect] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  
-  // Use supabase for auth session fetching
 
+  // ログイン画面は無し。データを読み込んだら、前回選んだ名前を復元する。
+  // 名前がまだ選ばれていないときだけ「名前を選ぶ」画面を出す。
   useEffect(() => {
     setMounted(true);
-    
-    // Check active session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchUserProfile(session.user.id, session.user.email);
-      } else {
-        setShowUserSelect(true);
-      }
-    });
+    let cancelled = false;
 
-    // Listen for auth state changes (login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        fetchUserProfile(session.user.id, session.user.email);
-      } else if (event === 'SIGNED_OUT') {
-        setCurrentUser('');
-        setShowUserSelect(true);
-        setUserMenuOpen(false);
-      }
-    });
+    import('@/stores/supabaseSync')
+      .then((m) => m.initSupabaseSync())
+      .catch((err) => console.error('Supabase sync failed:', err))
+      .finally(() => {
+        if (cancelled) return;
+        const remembered = getRememberedUserId();
+        if (remembered) setCurrentUser(remembered);
+        if (!useUserStore.getState().currentUser) setShowUserSelect(true);
+        setDataLoaded(true);
+      });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 保存エラーの通知は数秒で自動的に消す
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 8000);
+    return () => clearTimeout(timer);
+  }, [notice, setNotice]);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -98,30 +98,7 @@ export function DashboardShell() {
     }
   }, [theme]);
 
-  const fetchUserProfile = async (userId: string, email?: string) => {
-    const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
-    if (!error && data) {
-      // Create a mock users list for UI fallback if not populated
-      useUserStore.setState((state) => {
-        const exists = state.users.find(u => u.id === data.id);
-        if (!exists) {
-          return { users: [...state.users, data as any], currentUser: data as any };
-        }
-        return { currentUser: data as any };
-      });
-      setShowUserSelect(false);
-      
-      import('@/stores/supabaseSync').then((m) => m.initSupabaseSync());
-    } else {
-      setShowUserSelect(true);
-    }
-  };
-
-  // BYPASS AUTH LOCALLY
-  // if (!session) {
-  //  return <AuthScreen />;
-  // }
-  if (!mounted) {
+  if (!mounted || !dataLoaded) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-surface-50">
         <div className="flex flex-col items-center gap-4">
@@ -135,7 +112,7 @@ export function DashboardShell() {
   }
 
   if (showUserSelect || !currentUser) {
-    return <UserSelectModal />;
+    return <UserSelectModal onClose={() => setShowUserSelect(false)} />;
   }
 
   const overdueTasks = tasks.filter(t => {
@@ -195,7 +172,7 @@ export function DashboardShell() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-2">
           <div className={`text-[10px] font-semibold text-surface-400 uppercase tracking-wider px-3 mb-2 ${sidebarCollapsed ? 'hidden' : ''}`}>
-            {t('nav.projects')}
+            {t('nav.views')}
           </div>
           
           {NAV_ITEMS.map((item) => {
@@ -258,7 +235,7 @@ export function DashboardShell() {
           {isAdminUser(currentUser) && (
             <>
               <div className={`mt-6 text-[10px] font-semibold text-surface-400 uppercase tracking-wider px-3 mb-2 ${sidebarCollapsed ? 'hidden' : ''}`}>
-                管理者メニュー
+                {t('nav.adminMenu')}
               </div>
               <button
                 onClick={() => { setViewMode('accounts'); setMobileSidebarOpen(false); }}
@@ -267,11 +244,11 @@ export function DashboardShell() {
                     ? 'bg-primary-50 text-primary-700 font-medium shadow-sm'
                     : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
                 } ${sidebarCollapsed ? 'justify-center' : ''}`}
-                data-tooltip={sidebarCollapsed ? 'アカウント管理' : undefined}
+                data-tooltip={sidebarCollapsed ? t('nav.accounts') : undefined}
               >
                 <Settings className={`w-[18px] h-[18px] flex-shrink-0 ${viewMode === 'accounts' ? 'text-primary-600' : ''}`} />
                 {!sidebarCollapsed && (
-                  <span className="text-sm">アカウント管理</span>
+                  <span className="text-sm">{t('nav.accounts')}</span>
                 )}
               </button>
             </>
@@ -353,27 +330,17 @@ export function DashboardShell() {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Page title */}
+          {/* Page title (the Gantt view draws its own) */}
           {viewMode !== 'gantt' && (
-            <h1 className="text-lg font-bold text-surface-900 hidden sm:block">
+            <h1 className="text-lg font-bold text-surface-900 truncate min-w-0">
               {t(`nav.${viewMode === 'my-tasks' ? 'myTasks' : viewMode}`)}
             </h1>
           )}
 
-          {/* Search */}
-          <div className="flex-1 max-w-md mx-auto sm:mx-0">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-              <input
-                type="text"
-                placeholder={t('common.search')}
-                className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-50 border border-surface-200 text-sm text-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 transition-all"
-              />
-            </div>
-          </div>
+          <div className="flex-1" />
 
-          {/* Language Tabs */}
-          <div className="flex items-center gap-1 bg-surface-100 rounded-lg p-1">
+          {/* Language Tabs (on phones they live in the user menu) */}
+          <div className="hidden sm:flex items-center gap-1 bg-surface-100 rounded-lg p-1">
             {(['ja', 'en', 'th'] as Language[]).map((l) => (
               <button
                 key={l}
@@ -388,7 +355,7 @@ export function DashboardShell() {
           {/* Theme Toggle */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded-lg transition-colors"
+            className="hidden sm:block p-1.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded-lg transition-colors"
             title="Toggle theme"
           >
             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -425,8 +392,8 @@ export function DashboardShell() {
                 />
                 <div className="absolute right-0 mt-2 w-80 bg-surface-0 rounded-lg shadow-xl border border-surface-200 py-2 z-[100]">
                   <div className="px-4 py-2 border-b border-surface-100 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-surface-900">通知</h3>
-                    <span className="text-xs text-surface-500">{overdueTasks.length}件</span>
+                    <h3 className="text-sm font-bold text-surface-900">{t('notification.title')}</h3>
+                    <span className="text-xs text-surface-500">{t('notification.count', { count: String(overdueTasks.length) })}</span>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
                     {overdueTasks.length > 0 ? (
@@ -443,14 +410,14 @@ export function DashboardShell() {
                             <div className="w-2 h-2 mt-1.5 rounded-full bg-danger shrink-0" />
                             <div>
                               <p className="text-sm font-medium text-surface-900 line-clamp-2">{getMultiLangText(task.name, lang)}</p>
-                              <p className="text-xs text-danger mt-1">期限超過: {task.planned_end_date}</p>
+                              <p className="text-xs text-danger mt-1">{t('notification.overduePrefix')}: {task.planned_end_date}</p>
                             </div>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="px-4 py-6 text-center text-surface-500 text-sm">
-                        新しい通知はありません
+                        {t('notification.none')}
                       </div>
                     )}
                   </div>
@@ -461,15 +428,18 @@ export function DashboardShell() {
 
           {/* New Task Button */}
           {currentUser?.role !== 'viewer' && (
-            <div className="hidden sm:flex items-center gap-2">
-              <CsvExportButton />
-              <CsvImportButton />
+            <div className="flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2">
+                <CsvExportButton />
+                <CsvImportButton />
+              </div>
               <button
                 onClick={() => openTaskModal()}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg text-sm font-medium hover:from-primary-600 hover:to-primary-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg text-sm font-medium hover:from-primary-600 hover:to-primary-700 transition-all shadow-md hover:shadow-lg active:scale-95"
+                title={t('task.new')}
               >
                 <Plus className="w-4 h-4" />
-                <span>{t('task.new')}</span>
+                <span className="hidden sm:inline">{t('task.new')}</span>
               </button>
             </div>
           )}
@@ -499,24 +469,40 @@ export function DashboardShell() {
                   className="fixed inset-0 z-40" 
                   onClick={() => setUserMenuOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-surface-0 rounded-xl shadow-xl border border-surface-100 py-1 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-surface-0 rounded-xl shadow-xl border border-surface-100 py-1 z-50">
+                  <div className="px-4 py-2 border-b border-surface-100">
+                    <div className="text-sm font-semibold text-surface-900 truncate">{currentUser.name}</div>
+                    <div className="text-[11px] text-surface-400">{t(`role.${currentUser.role}`)}</div>
+                  </div>
                   <button
                     onClick={() => {
                       setUserMenuOpen(false);
                       setShowUserSelect(true);
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-surface-700 hover:bg-surface-50 hover:text-primary-600 transition-colors"
+                    className="w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm text-surface-700 hover:bg-surface-50 hover:text-primary-600 transition-colors"
                   >
-                    Switch Account
+                    <UserRound className="w-4 h-4" />
+                    {t('auth.switchUser')}
                   </button>
+                  <div className="sm:hidden px-4 py-2 border-t border-surface-100">
+                    <div className="flex items-center gap-1 bg-surface-100 rounded-lg p-1">
+                      {(['ja', 'en', 'th'] as Language[]).map((l) => (
+                        <button
+                          key={l}
+                          onClick={() => setLang(l)}
+                          className={`lang-tab flex-1 text-center whitespace-nowrap ${lang === l ? 'active' : ''}`}
+                        >
+                          {l === 'ja' ? 'JP' : l === 'en' ? 'EN' : 'TH'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <button
-                    onClick={async () => {
-                      setUserMenuOpen(false);
-                      await supabase.auth.signOut();
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-red-50 transition-colors"
+                    onClick={() => { setUserMenuOpen(false); setTheme(theme === 'dark' ? 'light' : 'dark'); }}
+                    className="sm:hidden w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
                   >
-                    Log Out
+                    {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    {theme === 'dark' ? 'Light' : 'Dark'}
                   </button>
                 </div>
               </>
@@ -531,6 +517,26 @@ export function DashboardShell() {
           </div>
         </main>
       </div>
+
+      {/* ═══ Save error / info notice ═══ */}
+      {notice && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] w-[calc(100%-2rem)] max-w-md animate-fade-in">
+          <div className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm ${
+            notice.kind === 'error'
+              ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-100'
+              : 'bg-surface-0 border-surface-200 text-surface-800'
+          }`}>
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="font-medium">{t(`notice.${notice.message}`)}</div>
+              {notice.detail && <div className="text-xs opacity-70 mt-0.5 break-words">{notice.detail}</div>}
+            </div>
+            <button onClick={() => setNotice(null)} className="p-1 rounded hover:bg-black/5" title={t('notice.dismiss')}>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ═══ Modals ═══ */}
       {taskModalOpen && (
